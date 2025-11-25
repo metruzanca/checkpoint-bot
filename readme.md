@@ -1,4 +1,8 @@
-# Checkpoint Bot
+<img src=".github/Remote_Caffeinator.png">
+
+# Caffeinator (aka Checkpoint Bot)
+
+Little accountability bot for my discord server.
 
 ## TODO
 
