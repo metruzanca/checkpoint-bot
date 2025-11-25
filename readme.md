@@ -13,6 +13,7 @@ Little accountability bot for my discord server.
   - [ ] Get next checkpoint
   - ... more to come
 - [ ] (try to) Make sure bot unregisters commands when it crashes
+- [ ] Bug, running prod bot in local and stopping, unregisters commands of prod bot. TODO, create second bot for dev
 
 ## Resources
 
