@@ -29,10 +29,6 @@ jobs:
       - name: Run go format
         run: go fmt ./...
 
-      # Run go lint
-      - name: Run go lint
-        run: go lint ./...
-
       # Run sqlc generate
       - uses: sqlc-dev/setup-sqlc@v3
         with:
