@@ -3,6 +3,7 @@
 ## TODO
 
 - [ ] Integrate Goose for migrations (`schema` folder currently not being used)
+  - I think I need to move the queries/schema sql files as I might need to embed the schema folder migrations
 - [ ] Implement slash commands
   - [ ] Create Checkpoint
   - [ ] Get next checkpoint

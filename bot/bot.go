@@ -34,6 +34,11 @@ func (b *Bot) Start() {
 	log.Info("Bot is now running.")
 }
 
+func (b *Bot) Stop() {
+	b.Session.Close()
+	log.Info("Bot stopped gracefully.")
+}
+
 // func (b *Bot) SendMessage(channelID, message string) {
 // 	channel, err := b.Session.Channel(channelID)
 // 	if err != nil {
