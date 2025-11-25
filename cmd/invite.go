@@ -14,7 +14,7 @@ import (
 var inviteCmd = &cobra.Command{
 	Use:               "invite",
 	Short:             "Generates a Discord invite link for the bot",
-	PersistentPreRunE: config.PersistentPostRunE,
+	PersistentPreRunE: config.PersistentPreRunE,
 	Run: func(cmd *cobra.Command, args []string) {
 		clientID := viper.GetString("DISCORD_CLIENT_ID")
 		if clientID == "" {

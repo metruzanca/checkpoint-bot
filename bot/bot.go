@@ -16,7 +16,7 @@ type Bot struct {
 func NewBot(token string) *Bot {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatal("Error creating Discord session: ", err)
+		log.Fatal("Error creating Discord session: ", "err", err)
 	}
 	return &Bot{
 		Session: session,
@@ -26,22 +26,25 @@ func NewBot(token string) *Bot {
 }
 
 func (b *Bot) Start() {
-	b.Session.Open()
+	err := b.Session.Open()
+	if err != nil {
+		log.Fatal("Error opening Discord session: ", "err", err)
+	}
 	defer b.Session.Close()
 	log.Info("Bot is now running.")
 }
 
-func (b *Bot) SendMessage(channelID, message string) {
-	channel, err := b.Session.Channel(channelID)
-	if err != nil {
-		log.Fatal("Error getting channel: ", err)
-	}
+// func (b *Bot) SendMessage(channelID, message string) {
+// 	channel, err := b.Session.Channel(channelID)
+// 	if err != nil {
+// 		log.Fatal("Error getting channel: ", "err", err)
+// 	}
 
-	_, err = b.Session.ChannelMessageSend(channel.ID, message)
-	if err != nil {
-		log.Fatal("Error sending message: ", err)
-	}
-}
+// 	_, err = b.Session.ChannelMessageSend(channel.ID, message)
+// 	if err != nil {
+// 		log.Fatal("Error sending message: ", "err", err)
+// 	}
+// }
 
 func (b *Bot) RegisterCommands() {
 

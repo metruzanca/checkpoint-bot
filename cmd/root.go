@@ -10,17 +10,14 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:                "checkpoint",
-	Short:              "A ",
-	PersistentPostRunE: config.PersistentPostRunE,
+	Use:               "checkpoint",
+	Short:             "A Discord bot for managing our accountability group's checkpoints",
+	PersistentPreRunE: config.PersistentPreRunE,
 	Run: func(cmd *cobra.Command, args []string) {
-		config.LoadConfig()
-		token := viper.GetString("DISCORD_CLIENT_TOKEN")
-		channelID := viper.GetString("DISCORD_CHANNEL_ID")
+		token := viper.GetString("TOKEN")
 
 		bot := bot.NewBot(token)
 		bot.Start()
-		bot.SendMessage(channelID, "Bot is now running.")
 
 		<-make(chan struct{})
 	},

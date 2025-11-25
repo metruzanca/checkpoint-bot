@@ -30,7 +30,7 @@ func LoadConfig() error {
 }
 
 // Used to bind environment variables to flags in the root command
-func PersistentPostRunE(cmd *cobra.Command, args []string) error {
+func PersistentPreRunE(cmd *cobra.Command, args []string) error {
 	if err := LoadConfig(); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
