@@ -3,6 +3,7 @@ package bot
 import (
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/database"
+	"github.com/spf13/viper"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -32,6 +33,12 @@ func (b *Bot) Start() {
 	}
 	defer b.Session.Close()
 	log.Info("Bot is now running.")
+
+	// Send a message to the dev channel if it is set
+	channelID := viper.GetString("CHANNEL_ID")
+	if channelID != "" {
+		b.SendTextMessage(channelID, "Bot has restarted.")
+	}
 }
 
 func (b *Bot) Stop() {
@@ -39,17 +46,17 @@ func (b *Bot) Stop() {
 	log.Info("Bot stopped gracefully.")
 }
 
-// func (b *Bot) SendMessage(channelID, message string) {
-// 	channel, err := b.Session.Channel(channelID)
-// 	if err != nil {
-// 		log.Fatal("Error getting channel: ", "err", err)
-// 	}
+func (b *Bot) SendTextMessage(channelID, message string) {
+	channel, err := b.Session.Channel(channelID)
+	if err != nil {
+		log.Fatal("Error getting channel: ", "err", err)
+	}
 
-// 	_, err = b.Session.ChannelMessageSend(channel.ID, message)
-// 	if err != nil {
-// 		log.Fatal("Error sending message: ", "err", err)
-// 	}
-// }
+	_, err = b.Session.ChannelMessageSend(channel.ID, message)
+	if err != nil {
+		log.Fatal("Error sending message: ", "err", err)
+	}
+}
 
 func (b *Bot) RegisterCommands() {
 
