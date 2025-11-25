@@ -8,6 +8,7 @@
   - [ ] Create Checkpoint
   - [ ] Get next checkpoint
   - ... more to come
+- [ ] (try to) Make sure bot unregisters commands when it crashes
 
 ## Resources
 

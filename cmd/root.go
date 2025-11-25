@@ -5,7 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/bot"
+	"github.com/metruzanca/checkpoint-bot/bot/commands"
 	"github.com/metruzanca/checkpoint-bot/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,6 +21,9 @@ var rootCmd = &cobra.Command{
 		token := viper.GetString("TOKEN")
 
 		bot := bot.NewBot(token)
+
+		bot.RegisterCommand(commands.CreateCheckpointCommand, commands.CreateCheckpointCallback)
+
 		bot.Start()
 		defer bot.Stop()
 
@@ -27,6 +32,7 @@ var rootCmd = &cobra.Command{
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 		<-sc
+		log.Info("Shutting down...")
 	},
 }
 
