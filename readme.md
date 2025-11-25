@@ -1,4 +1,4 @@
-<img src=".github/Remote_Caffeinator.png">
+<img src=".github/Remote_Caffeinator.png" alt="Risk of Rain 2's remote caffeinator">
 
 # Caffeinator (aka Checkpoint Bot)
 
