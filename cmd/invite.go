@@ -16,9 +16,9 @@ var inviteCmd = &cobra.Command{
 	Short:             "Generates a Discord invite link for the bot",
 	PersistentPreRunE: config.PersistentPreRunE,
 	Run: func(cmd *cobra.Command, args []string) {
-		clientID := viper.GetString("DISCORD_CLIENT_ID")
+		clientID := viper.GetString("CLIENT_ID")
 		if clientID == "" {
-			log.Fatal("DISCORD_CLIENT_ID is not set")
+			log.Fatal("CLIENT_ID is not set")
 		}
 
 		inviteLink := fmt.Sprintf("https://discord.com/api/oauth2/authorize?client_id=%s&permissions=8&scope=bot", clientID)

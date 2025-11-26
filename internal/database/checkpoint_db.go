@@ -3,13 +3,13 @@ package database
 import (
 	"context"
 
-	"github.com/metruzanca/checkpoint-bot/bot/db"
+	"github.com/metruzanca/checkpoint-bot/internal/sqlc"
 )
 
 // Defines all operations used by the checkpoint bot
 type CheckpointDatabase interface {
-	CreateCheckpoint(ctx context.Context, params db.CreateCheckpointParams) (*db.Checkpoint, error)
-	GetUpcomingCheckpoint(ctx context.Context) (*db.Checkpoint, error)
+	CreateCheckpoint(ctx context.Context, params sqlc.CreateCheckpointParams) (*sqlc.Checkpoint, error)
+	GetUpcomingCheckpoint(ctx context.Context) (*sqlc.Checkpoint, error)
 	// MarkAttendance(ctx context.Context, params db.MarkAttendanceParams) error
 
 	// CreateGoal(ctx context.Context, params db.CreateGoalParams) (*db.Goal, error)
