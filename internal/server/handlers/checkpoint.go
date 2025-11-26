@@ -8,7 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/database"
-	"github.com/metruzanca/checkpoint-bot/internal/sqlc"
+	"github.com/metruzanca/checkpoint-bot/internal/database/queries"
 )
 
 type CheckpointHandler struct {
@@ -24,7 +24,7 @@ func NewCheckpointHandler(discordClient *discordgo.Session, database database.Ch
 }
 
 func (h *CheckpointHandler) CreateCheckpoint(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	checkpoint, err := h.Database.CreateCheckpoint(context.Background(), sqlc.CreateCheckpointParams{
+	checkpoint, err := h.Database.CreateCheckpoint(context.Background(), queries.CreateCheckpointParams{
 		ScheduledAt: time.Now().Add(time.Hour * 24 * 14).Format(time.RFC3339),
 		ChannelID:   i.ChannelID,
 	})

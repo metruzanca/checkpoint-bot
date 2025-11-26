@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/charmbracelet/log"
-	"github.com/metruzanca/checkpoint-bot/internal/migrations"
+	"github.com/metruzanca/checkpoint-bot/internal/database/migrations"
 	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
