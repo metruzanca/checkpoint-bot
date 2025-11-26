@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/config"
@@ -23,6 +25,14 @@ var rootCmd = &cobra.Command{
 		if err := bot.Start(); err != nil {
 			log.Fatal("Error starting bot: %w", err)
 		}
+
+		// Wait for interrupt signal to gracefully shutdown
+		// Docker containers typically send SIGTERM when stopping
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+		<-sc
+		log.Info("Shutting down...")
+		bot.Stop()
 	},
 }
 

@@ -3,6 +3,7 @@ package migrations
 import (
 	"database/sql"
 	"embed"
+	"fmt"
 
 	"github.com/charmbracelet/log"
 	"github.com/pressly/goose/v3"
@@ -15,8 +16,20 @@ var dialect string = "sqlite3"
 
 var localMigrationsDir string = "internal/migrations"
 
+// errorOnlyLogger logs only errors (Fatalf) and suppresses normal messages (Printf)
+type errorOnlyLogger struct{}
+
+func (l *errorOnlyLogger) Printf(format string, v ...interface{}) {
+	// Suppress normal messages
+}
+
+func (l *errorOnlyLogger) Fatalf(format string, v ...interface{}) {
+	log.Fatal("Migration error", "message", fmt.Sprintf(format, v...))
+}
+
 func init() {
 	goose.SetBaseFS(embedMigrations)
+	goose.SetLogger(&errorOnlyLogger{})
 
 	if err := goose.SetDialect(dialect); err != nil {
 		log.Fatal("Failed to set goose dialect", "err", err)
