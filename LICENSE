@@ -1,0 +1,23 @@
+Mozilla Public License Version 2.0
+
+Copyright (c) 2024
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+---
+
+MPL is a copyleft license that is easy to comply with. You must make the source code for any of your changes available under MPL, but you can combine the MPL software with proprietary code, as long as you keep the MPL code in separate files. Version 2.0 is, by default, compatible with LGPL and GPL version 2 or greater. You can distribute binaries under a proprietary license, as long as you make the source available under MPL.
+
+| Can                     | Cannot        | Must                          |
+| ----------------------- | ------------- | ----------------------------- |
+| Commercial use          | Use trademark | Include license and copyright |
+| Distribution            | Hold liable   | Disclose source               |
+| Modification            | Sublicense    | Include original              |
+| Patent use              |               | State changes                 |
+| Private use             |               | Same license (file)           |
+| Commercial distribution |               |                               |
+
+For a human-readable summary of the license, see:
+https://www.tldrlegal.com/license/mozilla-public-license-2-0-mpl-2

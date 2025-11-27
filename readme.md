@@ -6,7 +6,7 @@
   **A Discord bot for accountability and goal tracking**
   
   [![Go Version](https://img.shields.io/badge/go-1.25-blue.svg)](https://golang.org)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+  [![License](https://img.shields.io/badge/license-MPL%202.0-brightgreen.svg)](LICENSE)
   
 </div>
 
@@ -175,7 +175,7 @@ Create `NNNNN_name.sql` in `internal/database/migrations/` with `-- +goose Up` a
 
 ## 📝 License
 
-This project is licensed under the MIT License.
+This project is licensed under the Mozilla Public License 2.0 (MPL-2.0).
 
 ---
 
