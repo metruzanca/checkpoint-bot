@@ -179,13 +179,15 @@ var CreateCheckpointCmd = &Command{
 
 		log.Info("checkpoint created", "checkpoint_id", checkpoint.ID, "channel", i.ChannelID, "guild", i.GuildID, "user", i.Member.User.ID, "scheduled_at", scheduledAt.Format(time.RFC3339))
 
+		formattedDate := util.FormatCheckpointDate(scheduledAt)
+		countdown := util.FormatCountdown(scheduledAt)
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Embeds: []*discordgo.MessageEmbed{
 					{
 						Title:       "Checkpoint created",
-						Description: fmt.Sprintf("Checkpoint #%d created for %s", checkpoint.ID, util.FormatNaturalDate(scheduledAt)),
+						Description: fmt.Sprintf("Checkpoint #%d created for __%s__ %s", checkpoint.ID, formattedDate, countdown),
 						Color:       0x0099ff,
 					},
 				},
@@ -200,9 +202,12 @@ var ListCheckpointsCmd = &Command{
 		Description: "List the upcoming checkpoints",
 	},
 	Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.InteractionCreate) {
-		checkpoints, err := db.GetUpcomingCheckpoints(context.Background())
+		checkpoints, err := db.GetUpcomingCheckpointsByGuildAndChannel(context.Background(), queries.GetUpcomingCheckpointsByGuildAndChannelParams{
+			GuildID:   i.GuildID,
+			ChannelID: i.ChannelID,
+		})
 		if err != nil {
-			log.Error("cannot get upcoming checkpoints", "err", err, "channel", i.ChannelID)
+			log.Error("cannot get upcoming checkpoints", "err", err, "channel", i.ChannelID, "guild", i.GuildID)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -217,7 +222,7 @@ var ListCheckpointsCmd = &Command{
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "No upcoming checkpoints found.",
+					Content: "No upcoming checkpoints found for this channel.",
 				},
 			})
 			return
@@ -228,7 +233,13 @@ var ListCheckpointsCmd = &Command{
 		// Create an embed for each checkpoint
 		embeds := make([]*discordgo.MessageEmbed, 0, len(checkpoints))
 		for _, checkpoint := range checkpoints {
-			embeds = append(embeds, createCheckpointEmbed(checkpoint))
+			embed, err := createCheckpointEmbedWithGoals(db, checkpoint)
+			if err != nil {
+				log.Error("cannot create checkpoint embed with goals", "err", err, "checkpoint_id", checkpoint.ID)
+				// Fallback to embed without goals
+				embed = createCheckpointEmbed(checkpoint)
+			}
+			embeds = append(embeds, embed)
 		}
 
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -295,7 +306,9 @@ func createCheckpointEmbed(checkpoint queries.Checkpoint) *discordgo.MessageEmbe
 		log.Error("cannot parse checkpoint scheduled_at", "err", err, "checkpoint_id", checkpoint.ID, "scheduled_at", checkpoint.ScheduledAt)
 		description = fmt.Sprintf("Scheduled for %s", checkpoint.ScheduledAt)
 	} else {
-		description = fmt.Sprintf("Scheduled for %s", util.FormatNaturalDate(scheduledAt))
+		formattedDate := util.FormatCheckpointDate(scheduledAt)
+		countdown := util.FormatCountdown(scheduledAt)
+		description = fmt.Sprintf("Scheduled for __%s__ %s", formattedDate, countdown)
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -322,6 +335,48 @@ func createCheckpointEmbed(checkpoint queries.Checkpoint) *discordgo.MessageEmbe
 	}
 
 	return embed
+}
+
+// createCheckpointEmbedWithGoals creates a Discord embed for a checkpoint with goals included
+func createCheckpointEmbedWithGoals(db database.CheckpointDatabase, checkpoint queries.Checkpoint) (*discordgo.MessageEmbed, error) {
+	embed := createCheckpointEmbed(checkpoint)
+
+	// Get goals for this checkpoint
+	goals, err := db.GetGoalsByCheckpoint(context.Background(), checkpoint.ID)
+	if err != nil {
+		return embed, err
+	}
+
+	if len(goals) > 0 {
+		// Build goals text with user mentions
+		goalsText := ""
+		for _, goal := range goals {
+			goalsText += fmt.Sprintf("<@%s>:\n%s\n\n", goal.DiscordUser, goal.Description)
+		}
+
+		// Truncate if total length exceeds Discord limit (1024 characters)
+		if len(goalsText) > 1024 {
+			// Try to fit as many complete goals as possible
+			truncated := ""
+			for _, goal := range goals {
+				goalEntry := fmt.Sprintf("<@%s>:\n%s\n\n", goal.DiscordUser, goal.Description)
+				if len(truncated)+len(goalEntry) > 1020 {
+					truncated += "..."
+					break
+				}
+				truncated += goalEntry
+			}
+			goalsText = truncated
+		}
+
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   fmt.Sprintf("Goals (%d)", len(goals)),
+			Value:  goalsText,
+			Inline: false,
+		})
+	}
+
+	return embed, nil
 }
 
 func init() {

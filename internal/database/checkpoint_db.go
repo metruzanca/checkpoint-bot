@@ -23,5 +23,11 @@ type CheckpointDatabase interface {
 	GetPastCheckpointsByChannel(ctx context.Context, channelID string) ([]queries.Checkpoint, error)
 	GetUpcomingCheckpointByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointByGuildAndChannelParams) (*queries.Checkpoint, error)
 
+	GetGoalByCheckpointAndUser(ctx context.Context, params queries.GetGoalByCheckpointAndUserParams) (*queries.Goal, error)
+	UpdateGoalDescription(ctx context.Context, params queries.UpdateGoalDescriptionParams) error
+
+	GetUpcomingCheckpointsByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointsByGuildAndChannelParams) ([]queries.Checkpoint, error)
+	GetGoalsByCheckpoint(ctx context.Context, checkpointID int64) ([]queries.Goal, error)
+
 	Close() error
 }

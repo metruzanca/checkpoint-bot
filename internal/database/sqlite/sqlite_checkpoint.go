@@ -104,3 +104,36 @@ func (db *SqliteDatabase) GetUpcomingCheckpointByGuildAndChannel(ctx context.Con
 	}
 	return &record, nil
 }
+
+func (db *SqliteDatabase) GetGoalByCheckpointAndUser(ctx context.Context, params queries.GetGoalByCheckpointAndUserParams) (*queries.Goal, error) {
+	record, err := db.queries.GetGoalByCheckpointAndUser(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+func (db *SqliteDatabase) UpdateGoalDescription(ctx context.Context, params queries.UpdateGoalDescriptionParams) error {
+	err := db.queries.UpdateGoalDescription(ctx, params)
+	if err != nil {
+		return err
+	}
+	log.Info("Updated goal description", "checkpoint_id", params.CheckpointID, "discord_user", params.DiscordUser)
+	return nil
+}
+
+func (db *SqliteDatabase) GetUpcomingCheckpointsByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointsByGuildAndChannelParams) ([]queries.Checkpoint, error) {
+	records, err := db.queries.GetUpcomingCheckpointsByGuildAndChannel(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+func (db *SqliteDatabase) GetGoalsByCheckpoint(ctx context.Context, checkpointID int64) ([]queries.Goal, error) {
+	records, err := db.queries.GetGoalsByCheckpoint(ctx, checkpointID)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}

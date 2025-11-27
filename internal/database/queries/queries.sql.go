@@ -149,6 +149,66 @@ func (q *Queries) GetCheckpointByScheduledAtAndChannel(ctx context.Context, arg 
 	return i, err
 }
 
+const getGoalByCheckpointAndUser = `-- name: GetGoalByCheckpointAndUser :one
+SELECT id, discord_user, description, checkpoint_id, status, created_at FROM goals
+WHERE checkpoint_id = ? AND discord_user = ?
+`
+
+type GetGoalByCheckpointAndUserParams struct {
+	CheckpointID int64  `json:"checkpoint_id"`
+	DiscordUser  string `json:"discord_user"`
+}
+
+func (q *Queries) GetGoalByCheckpointAndUser(ctx context.Context, arg GetGoalByCheckpointAndUserParams) (Goal, error) {
+	row := q.db.QueryRowContext(ctx, getGoalByCheckpointAndUser, arg.CheckpointID, arg.DiscordUser)
+	var i Goal
+	err := row.Scan(
+		&i.ID,
+		&i.DiscordUser,
+		&i.Description,
+		&i.CheckpointID,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getGoalsByCheckpoint = `-- name: GetGoalsByCheckpoint :many
+SELECT id, discord_user, description, checkpoint_id, status, created_at FROM goals
+WHERE checkpoint_id = ?
+ORDER BY created_at ASC
+`
+
+func (q *Queries) GetGoalsByCheckpoint(ctx context.Context, checkpointID int64) ([]Goal, error) {
+	rows, err := q.db.QueryContext(ctx, getGoalsByCheckpoint, checkpointID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Goal
+	for rows.Next() {
+		var i Goal
+		if err := rows.Scan(
+			&i.ID,
+			&i.DiscordUser,
+			&i.Description,
+			&i.CheckpointID,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGuild = `-- name: GetGuild :one
 SELECT guild_id, timezone, owner_id, created_at FROM guilds
 WHERE guild_id = ?
@@ -264,6 +324,47 @@ func (q *Queries) GetUpcomingCheckpoints(ctx context.Context) ([]Checkpoint, err
 	return items, nil
 }
 
+const getUpcomingCheckpointsByGuildAndChannel = `-- name: GetUpcomingCheckpointsByGuildAndChannel :many
+SELECT id, scheduled_at, channel_id, guild_id, discord_user, created_at FROM checkpoints
+WHERE guild_id = ? AND channel_id = ? AND datetime(scheduled_at) >= datetime('now')
+ORDER BY datetime(scheduled_at) ASC
+`
+
+type GetUpcomingCheckpointsByGuildAndChannelParams struct {
+	GuildID   string `json:"guild_id"`
+	ChannelID string `json:"channel_id"`
+}
+
+func (q *Queries) GetUpcomingCheckpointsByGuildAndChannel(ctx context.Context, arg GetUpcomingCheckpointsByGuildAndChannelParams) ([]Checkpoint, error) {
+	rows, err := q.db.QueryContext(ctx, getUpcomingCheckpointsByGuildAndChannel, arg.GuildID, arg.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Checkpoint
+	for rows.Next() {
+		var i Checkpoint
+		if err := rows.Scan(
+			&i.ID,
+			&i.ScheduledAt,
+			&i.ChannelID,
+			&i.GuildID,
+			&i.DiscordUser,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markAttendance = `-- name: MarkAttendance :exec
 INSERT OR IGNORE INTO attendance (discord_user, checkpoint_id)
 VALUES (?, ?)
@@ -276,5 +377,22 @@ type MarkAttendanceParams struct {
 
 func (q *Queries) MarkAttendance(ctx context.Context, arg MarkAttendanceParams) error {
 	_, err := q.db.ExecContext(ctx, markAttendance, arg.DiscordUser, arg.CheckpointID)
+	return err
+}
+
+const updateGoalDescription = `-- name: UpdateGoalDescription :exec
+UPDATE goals
+SET description = ?
+WHERE checkpoint_id = ? AND discord_user = ?
+`
+
+type UpdateGoalDescriptionParams struct {
+	Description  string `json:"description"`
+	CheckpointID int64  `json:"checkpoint_id"`
+	DiscordUser  string `json:"discord_user"`
+}
+
+func (q *Queries) UpdateGoalDescription(ctx context.Context, arg UpdateGoalDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, updateGoalDescription, arg.Description, arg.CheckpointID, arg.DiscordUser)
 	return err
 }
