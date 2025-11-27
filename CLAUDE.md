@@ -1,5 +1,34 @@
 # Project Conventions and Architecture Guide
 
+## Quick Summary for AI Agents
+
+**Critical Rules**:
+
+- **MUST**: Use `github.com/charmbracelet/log` for logging (NOT standard Go log)
+- **MUST**: Use structured logging with key-value pairs: `log.Info("message", "key", value)`
+- **MUST**: Edit only `queries.sql` for database queries (DO NOT edit generated files)
+- **MUST**: Use `context.Background()` for all database operations in command handlers
+- **MUST**: Use `ErrorResponse()` helper for all error responses
+- **MUST**: Always respond to Discord interactions using `s.InteractionRespond()`
+- **MUST**: Each command file have `init()` function calling `registerCommand()`
+- **MUST**: Convert sqlc return values to pointers in database implementations
+
+**Key File Locations**:
+
+- Commands: `internal/server/commands/*.go`
+- Database queries: `internal/database/queries/queries.sql` (EDIT THIS)
+- Database interface: `internal/database/checkpoint_db.go`
+- Database implementation: `internal/database/sqlite/sqlite_db.go`
+- Migrations: `internal/database/migrations/NNNNN_name.sql`
+- Error helper: `ErrorResponse()` in `internal/server/commands/commands.go`
+
+**Build Commands**:
+
+- **MUST**: Use `go build ./...` to verify the project builds correctly
+- **MUST**: Use `go generate ./...` to regenerate sqlc code after editing `queries.sql`
+
+---
+
 ## Core Principles
 
 - **12 Factor App**: This project follows 12 Factor app principles
@@ -12,17 +41,29 @@
 
 ## Logging Rules
 
-### DO:
+### REQUIRED: Use Structured Logging
 
-- Use `github.com/charmbracelet/log` package
-- Prefix all log values with string names: `log.Info("message", "key", value)`
-- Include context in error logs: `log.Error("cannot create checkpoint", "err", err, "channel", i.ChannelID)`
-- Use appropriate log levels: `log.Debug()`, `log.Info()`, `log.Error()`, `log.Fatal()`
+**MUST**: Use `github.com/charmbracelet/log` package for all logging operations.
 
-### DON'T:
+**MUST NOT**: Use standard Go `log` package.
 
-- Use standard Go `log` package
-- Log without context or key-value pairs
+**MUST**: Prefix all log values with string names using key-value pairs.
+
+**MUST**: Include context in error logs with relevant identifiers.
+
+**MUST**: Use appropriate log levels: `log.Debug()`, `log.Info()`, `log.Error()`, `log.Fatal()`
+
+**MUST NOT**: Log without context or key-value pairs.
+
+### Logging Pattern
+
+**Format**: `log.Level("message", "key1", value1, "key2", value2)`
+
+**Required Context Keys**:
+
+- Error logs: MUST include `"err"` key with error value
+- Command logs: SHOULD include `"command"` and `"user"` or `"channel"` keys
+- Database logs: SHOULD include relevant identifiers like `"channel"`, `"checkpoint_id"`, etc.
 
 ### Example:
 
@@ -41,23 +82,29 @@ log.Error("cannot create checkpoint", "err", err, "channel", i.ChannelID)
 
 **File Location**: `internal/database/queries/queries.sql`
 
-**Query Annotations**:
+**MUST**: Edit only `internal/database/queries/queries.sql` - sqlc generates all Go code from this file.
 
-- `-- name: QueryName :one` - Returns a single row (use for SELECT, INSERT with RETURNING)
-- `-- name: QueryName :exec` - Executes without returning rows (use for UPDATE, DELETE, INSERT without RETURNING)
+**MUST NOT**: Edit generated files: `queries.sql.go`, `models.go`, `db.go`
 
-**Conventions**:
+**MUST**: After editing `queries.sql`, run `go generate ./...` to regenerate sqlc code.
 
-- **ALL Create operations MUST return the created record** (`:one` annotation)
-- Update/Delete operations use `:exec` (no return value)
+**MUST**: Use `go build ./...` to verify the project builds correctly after making changes.
+
+### Query Annotations
+
+**Pattern**: `-- name: QueryName :annotation`
+
+**Annotations**:
+
+- `:one` - Returns a single row (use for SELECT, INSERT with RETURNING)
+- `:exec` - Executes without returning rows (use for UPDATE, DELETE, INSERT without RETURNING)
+
+**Rules**:
+
+- **MUST**: ALL Create operations use `:one` annotation and return the created record
+- **MUST**: Update/Delete operations use `:exec` annotation (no return value)
 - Models are auto-generated from SQL schema by sqlc
 - The `Queries` struct wraps database operations and supports transactions via `WithTx()`
-
-**CRITICAL RULES**:
-
-- **DO NOT EDIT** generated files: `queries.sql.go`, `models.go`, `db.go`
-- Edit only `queries.sql` - sqlc generates the Go code
-- After editing `queries.sql`, run sqlc to regenerate Go code
 
 **Example Query**:
 
@@ -76,12 +123,14 @@ WHERE discord_user = ? AND checkpoint_id = ?;
 
 **Interface Location**: `internal/database/checkpoint_db.go`
 
+**Implementation Location**: `internal/database/sqlite/sqlite_db.go`
+
 **Pattern**:
 
 - `CheckpointDatabase` interface defines all database operations
-- Implementations (e.g., `SQLiteCheckpointDatabase` in `internal/database/sqlite/sqlite_db.go`) wrap sqlc-generated queries
-- **Important**: Interface methods return pointers (`*queries.Checkpoint`) while sqlc returns values
-- Database implementations MUST convert sqlc return values to pointers for interface consistency
+- Implementations (e.g., `SQLiteCheckpointDatabase`) wrap sqlc-generated queries
+- **CRITICAL**: Interface methods return pointers (`*queries.Checkpoint`) while sqlc returns values
+- **MUST**: Database implementations convert sqlc return values to pointers for interface consistency
 
 **Example Implementation Pattern**:
 
@@ -101,11 +150,15 @@ func (d *SqliteDatabase) CreateCheckpoint(ctx context.Context, params queries.Cr
 
 **File Pattern**: `NNNNN_name.sql` (e.g., `00001_initial.sql`)
 
-**Migration Structure**:
+**Location**: `internal/database/migrations/`
 
-- Each migration file MUST have:
-  - `-- +goose Up` section for forward migration
-  - `-- +goose Down` section for rollback
+**MUST**: Each migration file include both sections:
+
+- `-- +goose Up` section for forward migration
+- `-- +goose Down` section for rollback
+
+**Implementation Details**:
+
 - Migrations are embedded using `//go:embed *.sql`
 - Custom logger (`errorOnlyLogger`) only logs errors, suppresses normal messages
 - SQLite3 dialect is configured
@@ -132,7 +185,9 @@ DROP TABLE checkpoints;
 
 ### Command Registration Pattern
 
-**Registration Location**: Each command file has an `init()` function that calls `registerCommand()`
+**Location**: Each command file in `internal/server/commands/*.go`
+
+**MUST**: Each command file have an `init()` function that calls `registerCommand()`
 
 **Global Storage**: All commands are stored in a global `commands` map (defined in `commands.go`)
 
@@ -168,7 +223,7 @@ func init() {
 
 - Commands are registered per guild on bot startup
 - Unregistered commands are automatically cleaned up via `clearUnregisteredCommands()`
-- Commands are registered via `CommandHandler.RegisterCommands()` in bot startup
+- Commands are registered via `CommandHandler.RegisterCommands()` in `Bot.Start()` (see `internal/server/bot.go`)
 
 ### Command Handler Pattern
 
@@ -182,19 +237,19 @@ func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.Interact
 
 1. **Context Usage**:
 
-   - Use `context.Background()` for all database operations
+   - **MUST**: Use `context.Background()` for all database operations
    - Example: `db.CreateCheckpoint(context.Background(), params)`
 
 2. **Error Handling**:
 
-   - Use `ErrorResponse()` helper function for consistent error messages
-   - Always log errors with context before responding
-   - Pattern: `log.Error("action description", "err", err, "context_key", contextValue)`
+   - **MUST**: Use `ErrorResponse()` helper function for all error responses (located in `commands.go`)
+   - **MUST**: Log errors with context before responding
+   - **Pattern**: `log.Error("action description", "err", err, "context_key", contextValue)`
 
 3. **Interaction Response**:
-   - Use `s.InteractionRespond()` to respond to interactions
-   - Use `ErrorResponse()` helper for error responses
-   - Always respond to interactions (don't leave them hanging)
+   - **MUST**: Use `s.InteractionRespond()` to respond to interactions
+   - **MUST**: Use `ErrorResponse()` helper for error responses
+   - **MUST**: Always respond to interactions (never leave them hanging)
 
 **Example Handler**:
 
@@ -218,9 +273,9 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 
 **Error Response Helper**:
 
-- Location: `internal/server/commands/commands.go`
-- Function: `ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, message string)`
-- Use this for all error responses to maintain consistency
+- **Location**: `internal/server/commands/commands.go`
+- **Function**: `ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, message string)`
+- **MUST**: Use this for all error responses to maintain consistency
 
 ---
 
@@ -228,19 +283,24 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 
 ### Database Files
 
-- `internal/database/checkpoint_db.go` - Database interface definition
+**Editable Files**:
+
+- `internal/database/checkpoint_db.go` - Database interface definition (EDIT THIS)
 - `internal/database/queries/queries.sql` - SQL queries (EDIT THIS)
-- `internal/database/queries/queries.sql.go` - Generated by sqlc (DO NOT EDIT)
-- `internal/database/queries/models.go` - Generated by sqlc (DO NOT EDIT)
-- `internal/database/queries/db.go` - Generated by sqlc (DO NOT EDIT)
-- `internal/database/migrations/NNNNN_name.sql` - Migration files
-- `internal/database/sqlite/sqlite_db.go` - SQLite implementation
+- `internal/database/migrations/NNNNN_name.sql` - Migration files (EDIT THIS)
+- `internal/database/sqlite/sqlite_db.go` - SQLite implementation (EDIT THIS)
+
+**Generated Files (DO NOT EDIT)**:
+
+- `internal/database/queries/queries.sql.go` - Generated by sqlc
+- `internal/database/queries/models.go` - Generated by sqlc
+- `internal/database/queries/db.go` - Generated by sqlc
 
 ### Command Files
 
-- `internal/server/commands/commands.go` - Command registration infrastructure
+- `internal/server/commands/commands.go` - Command registration infrastructure and `ErrorResponse()` helper
 - `internal/server/commands/*.go` - Individual command implementations
-- Each command file MUST have an `init()` function calling `registerCommand()`
+- **MUST**: Each command file have an `init()` function calling `registerCommand()`
 
 ### Server Files
 
@@ -251,28 +311,35 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 
 ## Quick Reference Checklist
 
-When creating a new command:
+### Creating a New Command
 
-- [ ] Create command file in `internal/server/commands/`
-- [ ] Define `Command` struct with `ApplicationCommand` and `Handler`
-- [ ] Use `context.Background()` for database calls
-- [ ] Use `ErrorResponse()` for error handling
-- [ ] Log errors with context: `log.Error("action", "err", err, "key", value)`
-- [ ] Call `registerCommand()` in `init()` function
-- [ ] Always respond to interactions using `s.InteractionRespond()`
+**MUST** complete all steps:
 
-When creating a new database query:
+1. Create command file in `internal/server/commands/`
+2. Define `Command` struct with `ApplicationCommand` and `Handler` fields
+3. **MUST**: Use `context.Background()` for all database calls
+4. **MUST**: Use `ErrorResponse()` helper for all error handling
+5. **MUST**: Log errors with context: `log.Error("action", "err", err, "key", value)`
+6. **MUST**: Call `registerCommand()` in `init()` function
+7. **MUST**: Always respond to interactions using `s.InteractionRespond()`
 
-- [ ] Add query to `internal/database/queries/queries.sql`
-- [ ] Use `:one` for Create operations (must return created record)
-- [ ] Use `:exec` for Update/Delete operations
-- [ ] Run sqlc to regenerate Go code
-- [ ] Add method to `CheckpointDatabase` interface in `checkpoint_db.go`
-- [ ] Implement method in `internal/database/sqlite/sqlite_db.go` (convert value to pointer)
+### Creating a New Database Query
 
-When creating a new migration:
+**MUST** complete all steps:
 
-- [ ] Create file `NNNNN_name.sql` in `internal/database/migrations/`
-- [ ] Include `-- +goose Up` section
-- [ ] Include `-- +goose Down` section
-- [ ] Migration runs automatically on database initialization
+1. Add query to `internal/database/queries/queries.sql`
+2. **MUST**: Use `:one` annotation for Create operations (must return created record)
+3. **MUST**: Use `:exec` annotation for Update/Delete operations
+4. **MUST**: Run `go generate ./...` to regenerate sqlc code
+5. Add method to `CheckpointDatabase` interface in `checkpoint_db.go`
+6. **MUST**: Implement method in `internal/database/sqlite/sqlite_db.go` (convert sqlc return value to pointer)
+7. **MUST**: Run `go build ./...` to verify the project builds correctly
+
+### Creating a New Migration
+
+**MUST** complete all steps:
+
+1. Create file `NNNNN_name.sql` in `internal/database/migrations/` (follow naming pattern)
+2. **MUST**: Include `-- +goose Up` section for forward migration
+3. **MUST**: Include `-- +goose Down` section for rollback
+4. Migration runs automatically on database initialization
