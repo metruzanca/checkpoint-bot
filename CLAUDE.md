@@ -7,8 +7,7 @@
 - **MUST**: Use `github.com/charmbracelet/log` for logging (NOT standard Go log)
 - **MUST**: Use structured logging with key-value pairs: `log.Info("message", "key", value)`
 - **MUST**: Edit only `queries.sql` for database queries (DO NOT edit generated files)
-- **MUST**: Use `context.Background()` for all database operations in command handlers
-- **MUST**: Use `ErrorResponse()` helper for all error responses
+- **MUST**: Use `dbContext()` helper for all database operations in command handlers
 - **MUST**: Always respond to Discord interactions using `s.InteractionRespond()`
 - **MUST**: Each command file have `init()` function calling `registerCommand()`
 - **MUST**: Convert sqlc return values to pointers in database implementations
@@ -20,7 +19,7 @@
 - Database interface: `internal/database/checkpoint_db.go`
 - Database implementation: `internal/database/sqlite/sqlite_db.go`
 - Migrations: `internal/database/migrations/NNNNN_name.sql`
-- Error helper: `ErrorResponse()` in `internal/server/commands/commands.go`
+- Context helper: `dbContext()` in `internal/server/commands/commands.go`
 
 **Build Commands**:
 
@@ -237,28 +236,61 @@ func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.Interact
 
 1. **Context Usage**:
 
-   - **MUST**: Use `context.Background()` for all database operations
-   - Example: `db.CreateCheckpoint(context.Background(), params)`
+   - **MUST**: Use `dbContext()` helper function for all database operations
+   - **MUST**: Always defer `cancel()` after calling `dbContext()`
+   - **Pattern**: 
+     ```go
+     ctx, cancel := dbContext()
+     defer cancel()
+     ```
+   - Example: `db.CreateCheckpoint(ctx, params)`
 
 2. **Error Handling**:
 
-   - **MUST**: Use `ErrorResponse()` helper function for all error responses (located in `commands.go`)
    - **MUST**: Log errors with context before responding
-   - **Pattern**: `log.Error("action description", "err", err, "context_key", contextValue)`
+   - **MUST**: Respond to errors directly using `s.InteractionRespond()` with appropriate error messages
+   - **Pattern**: 
+     ```go
+     if err != nil {
+         log.Error("action description", "err", err, "context_key", contextValue)
+         s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+             Type: discordgo.InteractionResponseChannelMessageWithSource,
+             Data: &discordgo.InteractionResponseData{
+                 Content: "User-friendly error message",
+             },
+         })
+         return
+     }
+     ```
 
 3. **Interaction Response**:
    - **MUST**: Use `s.InteractionRespond()` to respond to interactions
-   - **MUST**: Use `ErrorResponse()` helper for error responses
    - **MUST**: Always respond to interactions (never leave them hanging)
+   - **MUST**: Use user-friendly error messages (use "server" not "guild" in messages)
+
+4. **User-Facing Terminology**:
+   - **MUST**: Use "server" instead of "guild" in all user-facing messages (error messages, responses, etc.)
+   - **MUST NOT**: Use "guild" in any text that Discord users will see
+   - **Note**: "Guild" is Discord's internal API term, but users refer to them as "servers"
+   - **OK**: Use "guild" in code, variable names, log messages, and internal documentation
+   - **Example**: Error message should say "Error getting server information" not "Error getting guild information"
 
 **Example Handler**:
 
 ```go
 Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.InteractionCreate) {
-    result, err := db.SomeOperation(context.Background(), params)
+    ctx, cancel := dbContext()
+    defer cancel()
+
+    result, err := db.SomeOperation(ctx, params)
     if err != nil {
         log.Error("cannot perform operation", "err", err, "channel", i.ChannelID)
-        ErrorResponse(s, i, "Error message for user")
+        s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+            Type: discordgo.InteractionResponseChannelMessageWithSource,
+            Data: &discordgo.InteractionResponseData{
+                Content: "Error message for user",
+            },
+        })
         return
     }
 
@@ -271,11 +303,12 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 }
 ```
 
-**Error Response Helper**:
+**Context Helper**:
 
 - **Location**: `internal/server/commands/commands.go`
-- **Function**: `ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, message string)`
-- **MUST**: Use this for all error responses to maintain consistency
+- **Function**: `dbContext() (context.Context, context.CancelFunc)`
+- **MUST**: Use this helper for all database operations to ensure proper timeout handling
+- **MUST**: Always defer `cancel()` after calling `dbContext()`
 
 ---
 
@@ -298,7 +331,7 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 
 ### Command Files
 
-- `internal/server/commands/commands.go` - Command registration infrastructure and `ErrorResponse()` helper
+- `internal/server/commands/commands.go` - Command registration infrastructure and `dbContext()` helper
 - `internal/server/commands/*.go` - Individual command implementations
 - **MUST**: Each command file have an `init()` function calling `registerCommand()`
 
@@ -317,9 +350,9 @@ Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo
 
 1. Create command file in `internal/server/commands/`
 2. Define `Command` struct with `ApplicationCommand` and `Handler` fields
-3. **MUST**: Use `context.Background()` for all database calls
-4. **MUST**: Use `ErrorResponse()` helper for all error handling
-5. **MUST**: Log errors with context: `log.Error("action", "err", err, "key", value)`
+3. **MUST**: Use `dbContext()` helper for all database calls (with `defer cancel()`)
+4. **MUST**: Log errors with context: `log.Error("action", "err", err, "key", value)`
+5. **MUST**: Respond to errors directly using `s.InteractionRespond()` with user-friendly messages
 6. **MUST**: Call `registerCommand()` in `init()` function
 7. **MUST**: Always respond to interactions using `s.InteractionRespond()`
 
