@@ -29,21 +29,25 @@ type Command struct {
 
 func (h *CommandHandler) RegisterCommands() {
 	for _, guild := range h.DiscordClient.State.Guilds {
-		for _, cmd := range commands {
-			registeredCmd, err := h.DiscordClient.ApplicationCommandCreate(h.DiscordClient.State.User.ID, guild.ID, &cmd.ApplicationCommand)
-			if err != nil {
-				log.Error("cannot register new command", "command", cmd.Name, "guild", guild.ID, "err", err)
-				continue
-			}
-			log.Debug("Registered new command", "command", registeredCmd.Name, "guild", guild.ID)
-		}
-
+		h.RegisterCommandsForGuild(guild.ID)
 	}
 	h.DiscordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if cmd, ok := commands[i.ApplicationCommandData().Name]; ok {
 			cmd.Handler(h.Database, s, i)
 		}
 	})
+}
+
+// RegisterCommandsForGuild registers all commands for a specific guild
+func (h *CommandHandler) RegisterCommandsForGuild(guildID string) {
+	for _, cmd := range commands {
+		registeredCmd, err := h.DiscordClient.ApplicationCommandCreate(h.DiscordClient.State.User.ID, guildID, &cmd.ApplicationCommand)
+		if err != nil {
+			log.Error("cannot register new command", "command", cmd.Name, "guild", guildID, "err", err)
+			continue
+		}
+		log.Debug("Registered new command", "command", registeredCmd.Name, "guild", guildID)
+	}
 }
 
 func registerCommand(cmd *Command) {

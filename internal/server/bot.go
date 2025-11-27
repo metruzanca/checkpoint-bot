@@ -15,8 +15,9 @@ import (
 )
 
 type Bot struct {
-	DiscordClient *discordgo.Session
-	Database      database.CheckpointDatabase
+	DiscordClient  *discordgo.Session
+	Database       database.CheckpointDatabase
+	CommandHandler *commands.CommandHandler
 }
 
 func NewBot(token string, dbPath string) *Bot {
@@ -70,10 +71,18 @@ func (b *Bot) Start() error {
 		return fmt.Errorf("Error opening Discord session: %w", err)
 	}
 
-	commandHandler := commands.NewCommandHandler(b.DiscordClient, b.Database)
-	commandHandler.RegisterCommands()
+	b.CommandHandler = commands.NewCommandHandler(b.DiscordClient, b.Database)
+	b.CommandHandler.RegisterCommands()
+
+	// Handle bot being added to a new server
+	b.DiscordClient.AddHandler(b.onGuildJoined)
 
 	return nil
+}
+
+func (b *Bot) onGuildJoined(s *discordgo.Session, g *discordgo.GuildCreate) {
+	log.Info("Bot added to new guild", "guild_id", g.ID, "guild_name", g.Name, "member_count", g.MemberCount)
+	b.CommandHandler.RegisterCommandsForGuild(g.ID)
 }
 
 func (b *Bot) UnregisterCommands() {
