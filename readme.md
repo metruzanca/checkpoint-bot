@@ -14,19 +14,16 @@
 
 ## 📖 About
 
-**Caffeinator** is a Discord bot designed to help accountability groups stay on track. Create scheduled checkpoints, set goals, and track your progress together. Perfect for study groups, fitness buddies, or any team that wants to maintain accountability through regular check-ins.
+**Caffeinator** is a Discord bot for accountability groups. Create scheduled checkpoints, set goals, and track progress together.
 
 ### ✨ Features
 
-- **📅 Checkpoint Management**: Create scheduled checkpoints with date and time support
-- **🎯 Goal Tracking**: Set and manage goals for upcoming checkpoints
+- **📅 Checkpoint Management**: Create scheduled checkpoints with date/time support
+- **🎯 Goal Tracking**: Set and manage goals, mark status (completed/incomplete/failed)
 - **⏰ Timezone Support**: Automatic timezone handling per server
-- **📊 Status Tracking**: Mark goals as completed, incomplete, or failed
 - **👥 Multi-Server Support**: Works across multiple Discord servers
-- **🛡️ Rate Limiting**: Built-in protection against command spam
-- **🔐 Admin Controls**: Administrators can manage other users' goals
-- **💾 Persistent Storage**: SQLite database for reliable data storage
-- **⚡ High Performance & Lightweight**: Built with Go for optimal resource usage. This is NOT a Node.js app that will consume 300MB+ of RAM. Caffeinator idles at just 10-12MB RAM usage, with typical Go API server memory characteristics—efficient, fast, and perfect for long-running deployments.
+- **⚡ Lightweight**: Built with Go—idles at 10-12MB RAM usage. (Unlike similar nodejs apps)
+- **📦 Portable Binary**: Database migrations are embedded—just build and run the binary anywhere, no external files needed.
 
 ---
 
@@ -34,34 +31,28 @@
 
 - **Language**: [Go](https://golang.org) 1.25+
 - **Discord API**: [discordgo](https://github.com/bwmarrin/discordgo)
-- **Database**: SQLite with [sqlc](https://sqlc.dev) for type-safe queries
+- **Database**: SQLite with [sqlc](https://sqlc.dev) for type-safe queries (no ORM, just SQL)
 - **Migrations**: [goose](https://github.com/pressly/goose)
 - **Logging**: [charmbracelet/log](https://github.com/charmbracelet/log)
 - **CLI**: [Cobra](https://github.com/spf13/cobra)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Hosting
 
 ### Prerequisites
 
-- Docker (recommended) or a server with Docker support
-- A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
+- Discord bot token from [Discord Developer Portal](https://discord.com/developers/applications)
+- Docker (for Docker deployment) or Go 1.25+ (for building from source)
 
-### Using Docker (Recommended)
+### Option 1: Docker
 
-The easiest way to run Caffeinator is with Docker. An official Docker image will be available soon.
-
-**Coming Soon**: Official Docker image will be published to Docker Hub.
-
-For now, you can build and run from source:
+Deploy using Docker for easy containerized hosting:
 
 ```bash
-# Clone the repository
 git clone https://github.com/metruzanca/checkpoint-bot.git
 cd checkpoint-bot
 
-# Build and run with Docker
 docker build -t caffeinator .
 docker run -d \
   --name caffeinator \
@@ -70,26 +61,27 @@ docker run -d \
   caffeinator
 ```
 
-### Configuration
+### Option 2: Standalone Binary
 
-The bot requires only one configuration option:
-
-- `TOKEN` - Discord bot token (required)
-
-Set it as an environment variable when running Docker:
+Build and run the binary directly—perfect for VPS, dedicated servers, or any Linux/Windows/macOS system:
 
 ```bash
-docker run -e TOKEN="your-bot-token" caffeinator
+git clone https://github.com/metruzanca/checkpoint-bot.git
+cd checkpoint-bot
+go mod download
+go generate ./...
+go build -o checkpoint-bot .
+
+# Run the binary
+./checkpoint-bot --TOKEN="your-bot-token"
 ```
 
-### Invite the Bot to Your Server
+**Benefits of the standalone binary:**
 
-1. Get your bot's Client ID from the [Discord Developer Portal](https://discord.com/developers/applications)
-2. Use this invite link (replace `YOUR_CLIENT_ID` with your actual Client ID):
-   ```
-   https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=0&scope=bot%20applications.commands
-   ```
-3. Select your server and authorize the bot
+- Completely self-contained—migrations are embedded, no external files needed
+- Portable—move the binary anywhere and run it directly
+- Lightweight—single executable, no runtime dependencies
+- Database auto-created at `DB_PATH` (default: `./db/checkpoint.db`)
 
 ---
 
@@ -97,42 +89,18 @@ docker run -e TOKEN="your-bot-token" caffeinator
 
 ### Building from Source
 
-If you want to build from source or contribute:
+```bash
+git clone https://github.com/metruzanca/checkpoint-bot.git
+cd checkpoint-bot
+go mod download
+go generate ./..
+go build .
+./checkpoint-bot --TOKEN="your-bot-token" # TOKEN can also be in .env file or env variable if you prefer
+```
 
-1. **Clone the repository**
+### Configuration Options
 
-   ```bash
-   git clone https://github.com/metruzanca/checkpoint-bot.git
-   cd checkpoint-bot
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   go mod download
-   ```
-
-3. **Generate database code** (after editing queries)
-
-   ```bash
-   go generate ./...
-   ```
-
-4. **Build the bot**
-
-   ```bash
-   go build -o checkpoint ./cmd/...
-   ```
-
-5. **Run the bot**
-   ```bash
-   ./checkpoint --TOKEN="your-bot-token"
-   ```
-
-### Advanced Configuration
-
-For development or advanced deployments, additional options are available:
-
+- `TOKEN` - Discord bot token (required)
 - `CLIENT_ID` - Discord application client ID (for invite links)
 - `DB_PATH` - Path to SQLite database file (default: `./db/checkpoint.db`)
 - `CHANNEL_ID` - Optional channel ID for startup notifications
@@ -144,40 +112,18 @@ For development or advanced deployments, additional options are available:
 
 ### Commands
 
-#### `/checkpoint`
+- **`/checkpoint`** - Create a scheduled checkpoint
 
-Create a new checkpoint for your accountability group.
+  - `date` (required): `YYYY-MM-DD` format
+  - `time` (required): `HH:MM` or `H:MM AM/PM` format
+  - Example: `/checkpoint date:2024-01-15 time:7:00 PM`
 
-**Options:**
+- **`/goal`** - Set or edit goals for upcoming checkpoint
 
-- `date` (required): Date in `YYYY-MM-DD` format
-- `time` (required): Time in `HH:MM` or `H:MM AM/PM` format
+  - `user` (optional): User whose goals to edit (admin only)
+  - `status` (optional): `completed`, `incomplete`, or `failed`
 
-**Example:**
-
-```
-/checkpoint date:2024-01-15 time:7:00 PM
-```
-
-#### `/goal`
-
-Set or edit your goals for the upcoming checkpoint.
-
-**Options:**
-
-- `user` (optional): User whose goals to edit (admin only)
-- `status` (optional): Set goal status (`completed`, `incomplete`, `failed`)
-
-**Example:**
-
-```
-/goal
-/goal status:completed
-```
-
-#### `/next`
-
-View the next upcoming checkpoint and associated goals.
+- **`/next`** - View next upcoming checkpoint and goals
 
 ---
 
@@ -185,79 +131,45 @@ View the next upcoming checkpoint and associated goals.
 
 ```
 checkpoint-bot/
-├── cmd/                    # CLI commands (root, invite, clear)
+├── cmd/                    # CLI commands
 ├── internal/
-│   ├── config/            # Configuration management
-│   ├── database/
-│   │   ├── migrations/    # Database migrations (goose)
-│   │   ├── queries/       # SQL queries (sqlc)
-│   │   ├── checkpoint_db.go  # Database interface
-│   │   └── sqlite/        # SQLite implementation
-│   ├── server/
-│   │   ├── bot.go         # Bot initialization and lifecycle
-│   │   └── commands/      # Discord slash command handlers
-│   │       ├── checkpoint.go
-│   │       ├── goals.go
-│   │       └── commands.go
-│   └── util/              # Utility functions
+│   ├── config/            # Configuration
+│   ├── database/          # Database layer (sqlc + goose migrations)
+│   ├── server/            # Bot & Discord command handlers
+│   └── util/              # Utilities
 └── main.go                # Entry point
 ```
 
-### Key Architecture Points
-
-- **Database Layer**: SQL queries are defined in `queries.sql` and generated by sqlc
-- **Command Handlers**: Each command is self-contained in `internal/server/commands/`
-- **Migrations**: Database schema changes go in `internal/database/migrations/`
-- **12 Factor App**: Follows 12 Factor app principles for configuration and deployment
+**Key Points**: SQL queries in `queries.sql` (generated by sqlc), commands in `internal/server/commands/`, migrations in `internal/database/migrations/`
 
 ---
 
 ## 🧪 Development
 
-### Adding a New Command
+### Adding a Command
 
-1. Create a new file in `internal/server/commands/`
-2. Define your command with `ApplicationCommand` and `Handler`
-3. Register it in the `init()` function using `registerCommand()`
-4. Use `dbContext()` helper for database operations (with `defer cancel()`)
-5. Handle errors by logging and responding directly with `s.InteractionRespond()`
+1. Create file in `internal/server/commands/`
+2. Define `ApplicationCommand` and `Handler`
+3. Register in `init()` with `registerCommand()`
+4. Use `dbContext()` for database ops (with `defer cancel()`)
 
 ### Adding a Database Query
 
 1. Add query to `internal/database/queries/queries.sql`
-2. Use `:one` annotation for Create operations (must return created record)
-3. Use `:exec` annotation for Update/Delete operations
-4. Run `go generate ./...` to regenerate sqlc code
-5. Add method to `CheckpointDatabase` interface
-6. Implement method in SQLite implementation (convert return value to pointer)
+2. Use `:one` for Create (returns record), `:exec` for Update/Delete
+3. Run `go generate ./...` to regenerate sqlc code
+4. Add method to `CheckpointDatabase` interface and implement in SQLite
 
-### Running Migrations
+### Migrations
 
-Migrations run automatically on database initialization. To create a new migration:
-
-1. Create file `NNNNN_name.sql` in `internal/database/migrations/`
-2. Include both `-- +goose Up` and `-- +goose Down` sections
-3. Migration runs automatically on next bot startup
-
-### Building
-
-```bash
-# Verify the project builds
-go build ./...
-
-# Generate sqlc code (after editing queries.sql)
-go generate ./...
-```
+Create `NNNNN_name.sql` in `internal/database/migrations/` with `-- +goose Up` and `-- +goose Down` sections. Migrations run automatically on startup.
 
 ---
 
 ## 📚 Resources
 
-- [Awesome DiscordGo](https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo) - DiscordGo resources and examples
-- [Discordgo Examples](https://github.com/bwmarrin/discordgo/tree/master/examples)
-  - [Components](https://github.com/bwmarrin/discordgo/tree/master/examples/components)
-  - [Modals](https://github.com/bwmarrin/discordgo/tree/master/examples/modals)
-  - [Scheduled Events](https://github.com/bwmarrin/discordgo/tree/master/examples/scheduled_events)
+- [DiscordGo Examples](https://github.com/bwmarrin/discordgo/tree/master/examples)
+- [Awesome DiscordGo](https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo)
 
 ---
 
