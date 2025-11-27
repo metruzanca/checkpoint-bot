@@ -50,6 +50,27 @@ func registerCommand(cmd *Command) {
 	commands[cmd.ApplicationCommand.Name] = cmd
 }
 
+// GetAvailableCommands returns a list of all registered command names and descriptions
+func GetAvailableCommands() []struct {
+	Name        string
+	Description string
+} {
+	result := make([]struct {
+		Name        string
+		Description string
+	}, 0, len(commands))
+	for _, cmd := range commands {
+		result = append(result, struct {
+			Name        string
+			Description string
+		}{
+			Name:        cmd.Name,
+			Description: cmd.Description,
+		})
+	}
+	return result
+}
+
 func clearUnregisteredCommands(discordClient *discordgo.Session) {
 	for _, guild := range discordClient.State.Guilds {
 		registeredCommands, err := discordClient.ApplicationCommands(discordClient.State.User.ID, guild.ID)

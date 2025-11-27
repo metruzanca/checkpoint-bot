@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/database"
@@ -28,10 +29,33 @@ func NewBot(token string, dbPath string) *Bot {
 	}
 }
 
-func (b *Bot) Start() error {
+var startTime time.Time
 
+func init() {
+	startTime = time.Now()
+}
+
+func (b *Bot) Start() error {
+	// Startup logging
 	b.DiscordClient.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Info("Logged in as", "username", s.State.User.Username+s.State.User.Discriminator)
+		log.Info("Logged in as", "username", s.State.User.Username+"#"+s.State.User.Discriminator, "bot_id", s.State.User.ID)
+
+		// Show connected guilds
+		guilds := b.DiscordClient.State.Guilds
+		for _, guild := range guilds {
+			if guild.Name == "" {
+				// I think `State.Guilds` is a cache, sometimes it's empty. Weird
+				b.DiscordClient.Guild(guild.ID)
+			}
+
+			log.Info("Guild", "id", guild.ID, "name", guild.Name, "member_count", guild.MemberCount)
+		}
+
+		// Show available commands
+		registeredCommands := commands.GetAvailableCommands()
+		for _, cmd := range registeredCommands {
+			log.Info("Command", "name", cmd.Name, "description", cmd.Description)
+		}
 	})
 
 	err := b.DiscordClient.Open()
@@ -65,6 +89,7 @@ func (b *Bot) UnregisterCommands() {
 			}
 		}
 	}
+
 	log.Info("Commands unregistered successfully.")
 }
 
@@ -72,7 +97,7 @@ func (b *Bot) Stop() {
 	b.DiscordClient.Close()
 	b.Database.Close()
 
-	log.Info("Bot stopped gracefully.")
+	log.Info("Bot stopped gracefully.", "runtime", time.Since(startTime))
 }
 
 func (b *Bot) SendTextMessage(channelID, message string) {
