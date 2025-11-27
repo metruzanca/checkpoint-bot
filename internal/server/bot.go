@@ -40,7 +40,8 @@ func init() {
 func (b *Bot) Start() error {
 	// Startup logging
 	b.DiscordClient.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Info("Logged in as", "username", s.State.User.Username+"#"+s.State.User.Discriminator, "bot_id", s.State.User.ID, "invite_link", util.GetInviteLink(s.State.User.ID))
+		log.Info("Logged in as", "username", s.State.User.Username+"#"+s.State.User.Discriminator, "bot_id", s.State.User.ID)
+		fmt.Println("Invite me to a server: ", util.GetInviteLink(s.State.User.ID))
 
 		// Show connected guilds
 		guilds := b.DiscordClient.State.Guilds
