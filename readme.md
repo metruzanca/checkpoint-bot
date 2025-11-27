@@ -4,16 +4,22 @@
 
 Little accountability bot for my discord server.
 
+## Structure
+
+Main business logic is split between:
+
+- `internal/server/commands/` Defining slash commands and handlers
+- `internal/database/{queries,migrations}` Defining db actions
+
 ## TODO
 
-- [ ] Integrate Goose for migrations (`schema` folder currently not being used)
-  - I think I need to move the queries/schema sql files as I might need to embed the schema folder migrations
-- [ ] Implement slash commands
-  - [ ] Create Checkpoint
-  - [ ] Get next checkpoint
+- [x] Integrate Goose for migrations (`schema` folder currently not being used)
+- [x] Implement slash commands
+  - [x] Create Checkpoint
+  - [x] Get next checkpoint
   - ... more to come
-- [ ] (try to) Make sure bot unregisters commands when it crashes
-- [ ] Bug, running prod bot in local and stopping, unregisters commands of prod bot. TODO, create second bot for dev
+- [x] (try to) Make sure bot unregisters ~~commands when it crashes~~ when starting
+- [x] create second bot for dev
 
 ## Resources
 

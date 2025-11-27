@@ -14,6 +14,7 @@ type CommandHandler struct {
 }
 
 func NewCommandHandler(discordClient *discordgo.Session, database database.CheckpointDatabase) *CommandHandler {
+	clearUnregisteredCommands(discordClient)
 	return &CommandHandler{
 		Database:      database,
 		DiscordClient: discordClient,
@@ -46,4 +47,25 @@ func (h *CommandHandler) RegisterCommands() {
 
 func registerCommand(cmd *Command) {
 	commands[cmd.ApplicationCommand.Name] = cmd
+}
+
+func clearUnregisteredCommands(discordClient *discordgo.Session) {
+	for _, guild := range discordClient.State.Guilds {
+		registeredCommands, err := discordClient.ApplicationCommands(discordClient.State.User.ID, guild.ID)
+		if err != nil {
+			log.Error("Failed to get registered commands", "guild", guild.ID, "err", err)
+			continue
+		}
+		for _, cmd := range registeredCommands {
+			// Only delete commands that are not in the commands map
+			if _, exists := commands[cmd.Name]; !exists {
+				err := discordClient.ApplicationCommandDelete(discordClient.State.User.ID, guild.ID, cmd.ID)
+				if err != nil {
+					log.Error("Failed to delete command", "command", cmd.Name, "guild", guild.ID, "err", err)
+				} else {
+					log.Debug("Deleted unregistered command", "command", cmd.Name, "guild", guild.ID)
+				}
+			}
+		}
+	}
 }
