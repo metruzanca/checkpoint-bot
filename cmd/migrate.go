@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/charmbracelet/log"
+	"github.com/metruzanca/checkpoint-bot/internal/config"
 	"github.com/metruzanca/checkpoint-bot/internal/database/migrations"
 	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
@@ -12,8 +13,9 @@ import (
 )
 
 var migrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Run database migrations",
+	Use:               "migrate",
+	Short:             "Run database migrations",
+	PersistentPreRunE: config.PersistentPreRunE,
 	Long: `Run database migrations using goose.
 	
 Examples:
@@ -27,9 +29,6 @@ Examples:
 		}
 
 		dbPath := viper.GetString("db-path")
-		if dbPath == "" {
-			dbPath = "checkpoint.db"
-		}
 
 		// Open database connection
 		db, err := sql.Open("sqlite", dbPath)
@@ -37,6 +36,22 @@ Examples:
 			log.Fatal("Failed to open database", "err", err, "path", dbPath)
 		}
 		defer db.Close()
+
+		// Set SQLite PRAGMA statements before running migrations
+		// These must be set outside of transactions (goose runs migrations in transactions)
+		// Using db.Exec() instead of db.Conn() to avoid deadlock issues
+		// Enable WAL (Write-Ahead Logging) mode for better concurrency
+		if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+			log.Fatal("Error setting journal_mode", "err", err)
+		}
+		// Enable foreign key constraints for SQLite
+		if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+			log.Fatal("Error enabling foreign keys", "err", err)
+		}
+		// Set busy timeout to handle concurrent access gracefully
+		if _, err := db.Exec("PRAGMA busy_timeout=5000;"); err != nil {
+			log.Fatal("Error setting busy_timeout", "err", err)
+		}
 
 		// Set goose dialect
 		if err := goose.SetDialect("sqlite3"); err != nil {
@@ -79,7 +94,6 @@ Examples:
 }
 
 func init() {
-	migrateCmd.Flags().String("db-path", "", "Path to SQLite database file (default: checkpoint.db)")
-	viper.BindPFlag("db-path", migrateCmd.Flags().Lookup("db-path"))
+	migrateCmd.Flags().String("DB_PATH", "./db/checkpoint.db", "Path to SQLite database file (default: ./db/checkpoint.db)")
 	rootCmd.AddCommand(migrateCmd)
 }

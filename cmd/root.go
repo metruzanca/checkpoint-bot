@@ -20,10 +20,12 @@ var rootCmd = &cobra.Command{
 		token := viper.GetString("TOKEN")
 		dbPath := viper.GetString("DB_PATH")
 
+		log.Info("Starting bot")
+
 		bot := server.NewBot(token, dbPath)
 
 		if err := bot.Start(); err != nil {
-			log.Fatal("Error starting bot: %w", err)
+			log.Fatal("Error starting bot", "err", err)
 		}
 
 		// Wait for interrupt signal to gracefully shutdown
@@ -44,7 +46,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("token", "", "Discord bot token")
-	rootCmd.PersistentFlags().String("channel-id", "", "Discord channel ID")
-	rootCmd.PersistentFlags().String("db-path", "", "Path to SQLite database file (default: checkpoint.db)")
+	viper.SetDefault("DB_PATH", "./db/checkpoint.db")
+	rootCmd.PersistentFlags().String("TOKEN", "", "Discord bot token (required)")
+	rootCmd.PersistentFlags().String("CHANNEL_ID", "", "Discord channel ID")
+	rootCmd.PersistentFlags().String("DB_PATH", "./db/checkpoint.db", "Path to SQLite database file")
 }

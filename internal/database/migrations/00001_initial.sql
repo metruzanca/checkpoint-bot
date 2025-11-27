@@ -1,8 +1,8 @@
 -- +goose Up
 -- Schema for checkpoint bot database
-
--- Enable foreign key constraints for SQLite
-PRAGMA foreign_keys = ON;
+-- Note: PRAGMA statements (journal_mode, foreign_keys, busy_timeout) are set
+-- in the database connection initialization code, not in migrations, because
+-- SQLite cannot change journal_mode within a transaction.
 
 -- Checkpoints table: stores checkpoint events with ISO 8601 datetime string and channel
 CREATE TABLE IF NOT EXISTS checkpoints (

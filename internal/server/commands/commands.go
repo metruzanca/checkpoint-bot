@@ -6,6 +6,7 @@ import (
 	"github.com/metruzanca/checkpoint-bot/internal/database"
 )
 
+// Global mutable map, only modified in init() functions
 var commands = make(map[string]*Command)
 
 type CommandHandler struct {
@@ -31,10 +32,10 @@ func (h *CommandHandler) RegisterCommands() {
 		for _, cmd := range commands {
 			registeredCmd, err := h.DiscordClient.ApplicationCommandCreate(h.DiscordClient.State.User.ID, guild.ID, &cmd.ApplicationCommand)
 			if err != nil {
-				log.Error("cannot create command", "command", cmd.Name, "guild", guild.ID, "err", err)
-				return
+				log.Error("cannot register new command", "command", cmd.Name, "guild", guild.ID, "err", err)
+				continue
 			}
-			log.Debug("Registered command", "command", registeredCmd.Name, "guild", guild.ID)
+			log.Debug("Registered new command", "command", registeredCmd.Name, "guild", guild.ID)
 		}
 
 	}
@@ -70,11 +71,11 @@ func clearUnregisteredCommands(discordClient *discordgo.Session) {
 	}
 }
 
-func ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Error fetching checkpoint",
+			Content: message,
 		},
 	})
 }

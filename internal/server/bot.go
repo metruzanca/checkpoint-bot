@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/database"
+	"github.com/metruzanca/checkpoint-bot/internal/database/sqlite"
 	"github.com/metruzanca/checkpoint-bot/internal/server/commands"
 	"github.com/spf13/viper"
 
@@ -23,7 +24,7 @@ func NewBot(token string, dbPath string) *Bot {
 	}
 	return &Bot{
 		DiscordClient: session,
-		Database:      database.NewSQLiteCheckpointDatabase(dbPath),
+		Database:      sqlite.NewSqliteDatabase(dbPath),
 	}
 }
 
@@ -57,10 +58,10 @@ func (b *Bot) UnregisterCommands() {
 			log.Error("Failed to get registered commands", "guild", guild.ID, "err", err)
 			continue
 		}
-		for name, cmd := range registeredCommands {
-			err := b.DiscordClient.ApplicationCommandDelete(b.DiscordClient.State.User.ID, guild.ID, cmd.ID)
+		for _, cmd := range registeredCommands {
+			b.DiscordClient.ApplicationCommandDelete(b.DiscordClient.State.User.ID, guild.ID, cmd.ID)
 			if err != nil {
-				log.Error("Failed to delete command", "command", name, "guild", guild.ID, "err", err)
+				log.Error("Failed to delete command", "command", cmd.Name, "guild", guild.ID, "err", err)
 			}
 		}
 	}
@@ -69,20 +70,16 @@ func (b *Bot) UnregisterCommands() {
 
 func (b *Bot) Stop() {
 	b.DiscordClient.Close()
+	b.Database.Close()
 
 	log.Info("Bot stopped gracefully.")
 }
 
 func (b *Bot) SendTextMessage(channelID, message string) {
-	channel, err := b.DiscordClient.Channel(channelID)
+	_, err := b.DiscordClient.ChannelMessageSend(channelID, message)
 	if err != nil {
-		log.Fatal("Error getting channel: ", "err", err)
+		log.Error("Error sending message: ", "err", err)
 	}
 
-	_, err = b.DiscordClient.ChannelMessageSend(channel.ID, message)
-	if err != nil {
-		log.Fatal("Error sending message: ", "err", err)
-	}
-
-	log.Info("Message sent to channel: ", "channelID", channel.ID, "message", message)
+	log.Info("Message sent to channel: ", "channelID", channelID, "message", message)
 }

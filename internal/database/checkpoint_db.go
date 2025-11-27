@@ -18,4 +18,6 @@ type CheckpointDatabase interface {
 
 	// GetAllStats(ctx context.Context) (*db.GetAllStatsRow, error)
 	// GetUserStats(ctx context.Context, discordUser string) (*db.GetUserStatsRow, error)
+
+	Close() error
 }
