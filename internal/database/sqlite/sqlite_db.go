@@ -66,3 +66,7 @@ func NewSqliteDatabase(dbPath string) *SqliteDatabase {
 		db:      sqliteDB,
 	}
 }
+
+func (db *SqliteDatabase) Close() error {
+	return db.db.Close()
+}

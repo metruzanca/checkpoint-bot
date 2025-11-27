@@ -9,10 +9,6 @@ import (
 
 // Implementations for CheckpointDatabase interface
 
-func (db *SqliteDatabase) Close() error {
-	return db.db.Close()
-}
-
 func (db *SqliteDatabase) CreateCheckpoint(ctx context.Context, params queries.CreateCheckpointParams) (*queries.Checkpoint, error) {
 	record, err := db.queries.CreateCheckpoint(ctx, params)
 	if err != nil {
