@@ -47,6 +47,7 @@ func Execute() {
 
 func init() {
 	viper.SetDefault("DB_PATH", "./db/checkpoint.db")
+	viper.SetDefault("STARTUP_MESSAGE", true)
 	rootCmd.PersistentFlags().String("TOKEN", "", "Discord bot token (required)")
 	rootCmd.PersistentFlags().String("CHANNEL_ID", "", "Discord channel ID")
 	rootCmd.PersistentFlags().String("DB_PATH", "./db/checkpoint.db", "Path to SQLite database file")
