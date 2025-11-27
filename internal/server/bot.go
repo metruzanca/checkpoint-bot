@@ -56,6 +56,12 @@ func (b *Bot) Start() error {
 		for _, cmd := range registeredCommands {
 			log.Info("Command", "name", cmd.Name, "description", cmd.Description)
 		}
+
+		// Send a message to the dev channel if it is set
+		channelID := viper.GetString("CHANNEL_ID")
+		if channelID != "" {
+			b.SendTextMessage(channelID, "Bot has restarted.")
+		}
 	})
 
 	err := b.DiscordClient.Open()
@@ -65,12 +71,6 @@ func (b *Bot) Start() error {
 
 	commandHandler := commands.NewCommandHandler(b.DiscordClient, b.Database)
 	commandHandler.RegisterCommands()
-
-	// Send a message to the dev channel if it is set
-	channelID := viper.GetString("CHANNEL_ID")
-	if channelID != "" {
-		b.SendTextMessage(channelID, "Bot has restarted.")
-	}
 
 	return nil
 }
