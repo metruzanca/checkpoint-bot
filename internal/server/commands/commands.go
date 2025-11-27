@@ -32,8 +32,18 @@ func (h *CommandHandler) RegisterCommands() {
 		h.RegisterCommandsForGuild(guild.ID)
 	}
 	h.DiscordClient.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if cmd, ok := commands[i.ApplicationCommandData().Name]; ok {
+		commandName := i.ApplicationCommandData().Name
+		userID := ""
+		if i.Member != nil {
+			userID = i.Member.User.ID
+		} else if i.User != nil {
+			userID = i.User.ID
+		}
+		if cmd, ok := commands[commandName]; ok {
+			log.Info("command executed", "command", commandName, "channel", i.ChannelID, "guild", i.GuildID, "user", userID)
 			cmd.Handler(h.Database, s, i)
+		} else {
+			log.Warn("unknown command received", "command", commandName, "channel", i.ChannelID, "guild", i.GuildID)
 		}
 	})
 }

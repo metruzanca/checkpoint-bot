@@ -20,12 +20,12 @@ func (db *SqliteDatabase) CreateCheckpoint(ctx context.Context, params queries.C
 	return &record, nil
 }
 
-func (db *SqliteDatabase) GetUpcomingCheckpoint(ctx context.Context) (*queries.Checkpoint, error) {
-	record, err := db.queries.GetUpcomingCheckpoint(ctx)
+func (db *SqliteDatabase) GetUpcomingCheckpoints(ctx context.Context) ([]queries.Checkpoint, error) {
+	records, err := db.queries.GetUpcomingCheckpoints(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &record, nil
+	return records, nil
 }
 
 func (db *SqliteDatabase) MarkAttendance(ctx context.Context, params queries.MarkAttendanceParams) error {
@@ -64,16 +64,41 @@ func (db *SqliteDatabase) FailedGoal(ctx context.Context, params queries.FailedG
 	return nil
 }
 
-func (db *SqliteDatabase) GetAllStats(ctx context.Context) (*queries.GetAllStatsRow, error) {
-	record, err := db.queries.GetAllStats(ctx)
+func (db *SqliteDatabase) GetGuild(ctx context.Context, guildID string) (*queries.Guild, error) {
+	record, err := db.queries.GetGuild(ctx, guildID)
 	if err != nil {
 		return nil, err
 	}
 	return &record, nil
 }
 
-func (db *SqliteDatabase) GetUserStats(ctx context.Context, discordUser string) (*queries.GetUserStatsRow, error) {
-	record, err := db.queries.GetUserStats(ctx, discordUser)
+func (db *SqliteDatabase) CreateGuild(ctx context.Context, params queries.CreateGuildParams) (*queries.Guild, error) {
+	record, err := db.queries.CreateGuild(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Created guild", "guild_id", record.GuildID, "timezone", record.Timezone, "owner_id", record.OwnerID)
+	return &record, nil
+}
+
+func (db *SqliteDatabase) GetCheckpointByScheduledAtAndChannel(ctx context.Context, params queries.GetCheckpointByScheduledAtAndChannelParams) (*queries.Checkpoint, error) {
+	record, err := db.queries.GetCheckpointByScheduledAtAndChannel(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+func (db *SqliteDatabase) GetPastCheckpointsByChannel(ctx context.Context, channelID string) ([]queries.Checkpoint, error) {
+	records, err := db.queries.GetPastCheckpointsByChannel(ctx, channelID)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+func (db *SqliteDatabase) GetUpcomingCheckpointByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointByGuildAndChannelParams) (*queries.Checkpoint, error) {
+	record, err := db.queries.GetUpcomingCheckpointByGuildAndChannel(ctx, params)
 	if err != nil {
 		return nil, err
 	}

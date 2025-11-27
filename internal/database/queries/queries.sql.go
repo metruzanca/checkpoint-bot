@@ -31,22 +31,31 @@ const createCheckpoint = `-- name: CreateCheckpoint :one
     - All Create operations return the created record
 */
 
-INSERT INTO checkpoints (scheduled_at, channel_id)
-VALUES (?, ?) RETURNING id, scheduled_at, channel_id, created_at
+INSERT INTO checkpoints (scheduled_at, channel_id, guild_id, discord_user)
+VALUES (?, ?, ?, ?) RETURNING id, scheduled_at, channel_id, guild_id, discord_user, created_at
 `
 
 type CreateCheckpointParams struct {
 	ScheduledAt string `json:"scheduled_at"`
 	ChannelID   string `json:"channel_id"`
+	GuildID     string `json:"guild_id"`
+	DiscordUser string `json:"discord_user"`
 }
 
 func (q *Queries) CreateCheckpoint(ctx context.Context, arg CreateCheckpointParams) (Checkpoint, error) {
-	row := q.db.QueryRowContext(ctx, createCheckpoint, arg.ScheduledAt, arg.ChannelID)
+	row := q.db.QueryRowContext(ctx, createCheckpoint,
+		arg.ScheduledAt,
+		arg.ChannelID,
+		arg.GuildID,
+		arg.DiscordUser,
+	)
 	var i Checkpoint
 	err := row.Scan(
 		&i.ID,
 		&i.ScheduledAt,
 		&i.ChannelID,
+		&i.GuildID,
+		&i.DiscordUser,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -77,6 +86,29 @@ func (q *Queries) CreateGoal(ctx context.Context, arg CreateGoalParams) (Goal, e
 	return i, err
 }
 
+const createGuild = `-- name: CreateGuild :one
+INSERT INTO guilds (guild_id, timezone, owner_id)
+VALUES (?, ?, ?) RETURNING guild_id, timezone, owner_id, created_at
+`
+
+type CreateGuildParams struct {
+	GuildID  string `json:"guild_id"`
+	Timezone string `json:"timezone"`
+	OwnerID  string `json:"owner_id"`
+}
+
+func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (Guild, error) {
+	row := q.db.QueryRowContext(ctx, createGuild, arg.GuildID, arg.Timezone, arg.OwnerID)
+	var i Guild
+	err := row.Scan(
+		&i.GuildID,
+		&i.Timezone,
+		&i.OwnerID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const failedGoal = `-- name: FailedGoal :exec
 UPDATE goals
 SET status = 'failed'
@@ -93,94 +125,143 @@ func (q *Queries) FailedGoal(ctx context.Context, arg FailedGoalParams) error {
 	return err
 }
 
-const getAllStats = `-- name: GetAllStats :one
-SELECT 
-    COUNT(DISTINCT c.id) as total_checkpoints,
-    COUNT(DISTINCT g.id) as total_goals,
-    COUNT(DISTINCT CASE WHEN g.status = 'completed' THEN g.id END) as completed_goals,
-    COUNT(DISTINCT CASE WHEN g.status = 'failed' THEN g.id END) as failed_goals,
-    COUNT(DISTINCT CASE WHEN g.status = 'pending' THEN g.id END) as pending_goals,
-    COUNT(DISTINCT a.discord_user) as unique_participants,
-    COUNT(DISTINCT a.id) as total_attendance
-FROM checkpoints c
-LEFT JOIN goals g ON c.id = g.checkpoint_id
-LEFT JOIN attendance a ON c.id = a.checkpoint_id
+const getCheckpointByScheduledAtAndChannel = `-- name: GetCheckpointByScheduledAtAndChannel :one
+SELECT id, scheduled_at, channel_id, guild_id, discord_user, created_at FROM checkpoints
+WHERE scheduled_at = ? AND channel_id = ?
 `
 
-type GetAllStatsRow struct {
-	TotalCheckpoints   int64 `json:"total_checkpoints"`
-	TotalGoals         int64 `json:"total_goals"`
-	CompletedGoals     int64 `json:"completed_goals"`
-	FailedGoals        int64 `json:"failed_goals"`
-	PendingGoals       int64 `json:"pending_goals"`
-	UniqueParticipants int64 `json:"unique_participants"`
-	TotalAttendance    int64 `json:"total_attendance"`
+type GetCheckpointByScheduledAtAndChannelParams struct {
+	ScheduledAt string `json:"scheduled_at"`
+	ChannelID   string `json:"channel_id"`
 }
 
-func (q *Queries) GetAllStats(ctx context.Context) (GetAllStatsRow, error) {
-	row := q.db.QueryRowContext(ctx, getAllStats)
-	var i GetAllStatsRow
-	err := row.Scan(
-		&i.TotalCheckpoints,
-		&i.TotalGoals,
-		&i.CompletedGoals,
-		&i.FailedGoals,
-		&i.PendingGoals,
-		&i.UniqueParticipants,
-		&i.TotalAttendance,
-	)
-	return i, err
-}
-
-const getUpcomingCheckpoint = `-- name: GetUpcomingCheckpoint :one
-SELECT id, scheduled_at, channel_id, created_at FROM checkpoints
-WHERE datetime(scheduled_at) >= datetime('now')
-ORDER BY datetime(scheduled_at) ASC
-LIMIT 1
-`
-
-func (q *Queries) GetUpcomingCheckpoint(ctx context.Context) (Checkpoint, error) {
-	row := q.db.QueryRowContext(ctx, getUpcomingCheckpoint)
+func (q *Queries) GetCheckpointByScheduledAtAndChannel(ctx context.Context, arg GetCheckpointByScheduledAtAndChannelParams) (Checkpoint, error) {
+	row := q.db.QueryRowContext(ctx, getCheckpointByScheduledAtAndChannel, arg.ScheduledAt, arg.ChannelID)
 	var i Checkpoint
 	err := row.Scan(
 		&i.ID,
 		&i.ScheduledAt,
 		&i.ChannelID,
+		&i.GuildID,
+		&i.DiscordUser,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const getUserStats = `-- name: GetUserStats :one
-SELECT 
-    COALESCE((SELECT COUNT(*) FROM attendance a WHERE a.discord_user = ?1), 0) as user_checkpoints_attended,
-    COALESCE(COUNT(g.id), 0) as user_total_goals,
-    COALESCE(COUNT(CASE WHEN g.status = 'completed' THEN 1 END), 0) as user_completed_goals,
-    COALESCE(COUNT(CASE WHEN g.status = 'failed' THEN 1 END), 0) as user_failed_goals,
-    COALESCE(COUNT(CASE WHEN g.status = 'pending' THEN 1 END), 0) as user_pending_goals
-FROM (SELECT ?1 as discord_user) u
-LEFT JOIN goals g ON g.discord_user = u.discord_user
+const getGuild = `-- name: GetGuild :one
+SELECT guild_id, timezone, owner_id, created_at FROM guilds
+WHERE guild_id = ?
 `
 
-type GetUserStatsRow struct {
-	UserCheckpointsAttended interface{} `json:"user_checkpoints_attended"`
-	UserTotalGoals          interface{} `json:"user_total_goals"`
-	UserCompletedGoals      interface{} `json:"user_completed_goals"`
-	UserFailedGoals         interface{} `json:"user_failed_goals"`
-	UserPendingGoals        interface{} `json:"user_pending_goals"`
-}
-
-func (q *Queries) GetUserStats(ctx context.Context, discordUser string) (GetUserStatsRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserStats, discordUser)
-	var i GetUserStatsRow
+func (q *Queries) GetGuild(ctx context.Context, guildID string) (Guild, error) {
+	row := q.db.QueryRowContext(ctx, getGuild, guildID)
+	var i Guild
 	err := row.Scan(
-		&i.UserCheckpointsAttended,
-		&i.UserTotalGoals,
-		&i.UserCompletedGoals,
-		&i.UserFailedGoals,
-		&i.UserPendingGoals,
+		&i.GuildID,
+		&i.Timezone,
+		&i.OwnerID,
+		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getPastCheckpointsByChannel = `-- name: GetPastCheckpointsByChannel :many
+SELECT id, scheduled_at, channel_id, guild_id, discord_user, created_at FROM checkpoints
+WHERE channel_id = ? AND datetime(scheduled_at) < datetime('now')
+ORDER BY datetime(scheduled_at) DESC
+`
+
+func (q *Queries) GetPastCheckpointsByChannel(ctx context.Context, channelID string) ([]Checkpoint, error) {
+	rows, err := q.db.QueryContext(ctx, getPastCheckpointsByChannel, channelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Checkpoint
+	for rows.Next() {
+		var i Checkpoint
+		if err := rows.Scan(
+			&i.ID,
+			&i.ScheduledAt,
+			&i.ChannelID,
+			&i.GuildID,
+			&i.DiscordUser,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUpcomingCheckpointByGuildAndChannel = `-- name: GetUpcomingCheckpointByGuildAndChannel :one
+SELECT id, scheduled_at, channel_id, guild_id, discord_user, created_at FROM checkpoints
+WHERE guild_id = ? AND channel_id = ? AND datetime(scheduled_at) >= datetime('now')
+ORDER BY datetime(scheduled_at) ASC
+LIMIT 1
+`
+
+type GetUpcomingCheckpointByGuildAndChannelParams struct {
+	GuildID   string `json:"guild_id"`
+	ChannelID string `json:"channel_id"`
+}
+
+func (q *Queries) GetUpcomingCheckpointByGuildAndChannel(ctx context.Context, arg GetUpcomingCheckpointByGuildAndChannelParams) (Checkpoint, error) {
+	row := q.db.QueryRowContext(ctx, getUpcomingCheckpointByGuildAndChannel, arg.GuildID, arg.ChannelID)
+	var i Checkpoint
+	err := row.Scan(
+		&i.ID,
+		&i.ScheduledAt,
+		&i.ChannelID,
+		&i.GuildID,
+		&i.DiscordUser,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUpcomingCheckpoints = `-- name: GetUpcomingCheckpoints :many
+SELECT id, scheduled_at, channel_id, guild_id, discord_user, created_at FROM checkpoints
+WHERE datetime(scheduled_at) >= datetime('now')
+ORDER BY datetime(scheduled_at) ASC
+`
+
+func (q *Queries) GetUpcomingCheckpoints(ctx context.Context) ([]Checkpoint, error) {
+	rows, err := q.db.QueryContext(ctx, getUpcomingCheckpoints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Checkpoint
+	for rows.Next() {
+		var i Checkpoint
+		if err := rows.Scan(
+			&i.ID,
+			&i.ScheduledAt,
+			&i.ChannelID,
+			&i.GuildID,
+			&i.DiscordUser,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const markAttendance = `-- name: MarkAttendance :exec

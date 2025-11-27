@@ -9,15 +9,19 @@ import (
 // Defines all operations used by the checkpoint bot
 type CheckpointDatabase interface {
 	CreateCheckpoint(ctx context.Context, params queries.CreateCheckpointParams) (*queries.Checkpoint, error)
-	GetUpcomingCheckpoint(ctx context.Context) (*queries.Checkpoint, error)
+	GetUpcomingCheckpoints(ctx context.Context) ([]queries.Checkpoint, error)
 	MarkAttendance(ctx context.Context, params queries.MarkAttendanceParams) error
 
 	CreateGoal(ctx context.Context, params queries.CreateGoalParams) (*queries.Goal, error)
 	CompleteGoal(ctx context.Context, params queries.CompleteGoalParams) error
 	FailedGoal(ctx context.Context, params queries.FailedGoalParams) error
 
-	GetAllStats(ctx context.Context) (*queries.GetAllStatsRow, error)
-	GetUserStats(ctx context.Context, discordUser string) (*queries.GetUserStatsRow, error)
+	GetGuild(ctx context.Context, guildID string) (*queries.Guild, error)
+	CreateGuild(ctx context.Context, params queries.CreateGuildParams) (*queries.Guild, error)
+
+	GetCheckpointByScheduledAtAndChannel(ctx context.Context, params queries.GetCheckpointByScheduledAtAndChannelParams) (*queries.Checkpoint, error)
+	GetPastCheckpointsByChannel(ctx context.Context, channelID string) ([]queries.Checkpoint, error)
+	GetUpcomingCheckpointByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointByGuildAndChannelParams) (*queries.Checkpoint, error)
 
 	Close() error
 }

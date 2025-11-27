@@ -28,3 +28,6 @@ Main business logic is split between:
 
 - [Awesome DiscordGo](https://github.com/bwmarrin/discordgo/wiki/Awesome-DiscordGo)
 - [Discordgo Examples](https://github.com/bwmarrin/discordgo/tree/master/examples)
+  - [components](https://github.com/bwmarrin/discordgo/tree/master/examples/components)
+  - [modals](https://github.com/bwmarrin/discordgo/tree/master/examples/modals)
+  - [scheduled_events](https://github.com/bwmarrin/discordgo/tree/master/examples/scheduled_events)

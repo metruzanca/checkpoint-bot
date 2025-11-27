@@ -19,7 +19,20 @@ type Checkpoint struct {
 	ID          int64        `json:"id"`
 	ScheduledAt string       `json:"scheduled_at"`
 	ChannelID   string       `json:"channel_id"`
+	GuildID     string       `json:"guild_id"`
+	DiscordUser string       `json:"discord_user"`
 	CreatedAt   sql.NullTime `json:"created_at"`
+}
+
+type CheckpointRsvp struct {
+	ID           int64        `json:"id"`
+	CheckpointID int64        `json:"checkpoint_id"`
+	DiscordUser  string       `json:"discord_user"`
+	CreatedAt    sql.NullTime `json:"created_at"`
+}
+
+type DiscordUser struct {
+	DiscordUser string `json:"discord_user"`
 }
 
 type Goal struct {
@@ -29,4 +42,11 @@ type Goal struct {
 	CheckpointID int64        `json:"checkpoint_id"`
 	Status       string       `json:"status"`
 	CreatedAt    sql.NullTime `json:"created_at"`
+}
+
+type Guild struct {
+	GuildID   string       `json:"guild_id"`
+	Timezone  string       `json:"timezone"`
+	OwnerID   string       `json:"owner_id"`
+	CreatedAt sql.NullTime `json:"created_at"`
 }
