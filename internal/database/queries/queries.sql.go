@@ -16,8 +16,8 @@ WHERE discord_user = ? AND checkpoint_id = ?
 `
 
 type CompleteGoalParams struct {
-	DiscordUser  string
-	CheckpointID int64
+	DiscordUser  string `json:"discord_user"`
+	CheckpointID int64  `json:"checkpoint_id"`
 }
 
 func (q *Queries) CompleteGoal(ctx context.Context, arg CompleteGoalParams) error {
@@ -36,8 +36,8 @@ VALUES (?, ?) RETURNING id, scheduled_at, channel_id, created_at
 `
 
 type CreateCheckpointParams struct {
-	ScheduledAt string
-	ChannelID   string
+	ScheduledAt string `json:"scheduled_at"`
+	ChannelID   string `json:"channel_id"`
 }
 
 func (q *Queries) CreateCheckpoint(ctx context.Context, arg CreateCheckpointParams) (Checkpoint, error) {
@@ -58,9 +58,9 @@ VALUES (?, ?, ?) RETURNING id, discord_user, description, checkpoint_id, status,
 `
 
 type CreateGoalParams struct {
-	DiscordUser  string
-	Description  string
-	CheckpointID int64
+	DiscordUser  string `json:"discord_user"`
+	Description  string `json:"description"`
+	CheckpointID int64  `json:"checkpoint_id"`
 }
 
 func (q *Queries) CreateGoal(ctx context.Context, arg CreateGoalParams) (Goal, error) {
@@ -84,8 +84,8 @@ WHERE discord_user = ? AND checkpoint_id = ?
 `
 
 type FailedGoalParams struct {
-	DiscordUser  string
-	CheckpointID int64
+	DiscordUser  string `json:"discord_user"`
+	CheckpointID int64  `json:"checkpoint_id"`
 }
 
 func (q *Queries) FailedGoal(ctx context.Context, arg FailedGoalParams) error {
@@ -108,13 +108,13 @@ LEFT JOIN attendance a ON c.id = a.checkpoint_id
 `
 
 type GetAllStatsRow struct {
-	TotalCheckpoints   int64
-	TotalGoals         int64
-	CompletedGoals     int64
-	FailedGoals        int64
-	PendingGoals       int64
-	UniqueParticipants int64
-	TotalAttendance    int64
+	TotalCheckpoints   int64 `json:"total_checkpoints"`
+	TotalGoals         int64 `json:"total_goals"`
+	CompletedGoals     int64 `json:"completed_goals"`
+	FailedGoals        int64 `json:"failed_goals"`
+	PendingGoals       int64 `json:"pending_goals"`
+	UniqueParticipants int64 `json:"unique_participants"`
+	TotalAttendance    int64 `json:"total_attendance"`
 }
 
 func (q *Queries) GetAllStats(ctx context.Context) (GetAllStatsRow, error) {
@@ -163,11 +163,11 @@ LEFT JOIN goals g ON g.discord_user = u.discord_user
 `
 
 type GetUserStatsRow struct {
-	UserCheckpointsAttended interface{}
-	UserTotalGoals          interface{}
-	UserCompletedGoals      interface{}
-	UserFailedGoals         interface{}
-	UserPendingGoals        interface{}
+	UserCheckpointsAttended interface{} `json:"user_checkpoints_attended"`
+	UserTotalGoals          interface{} `json:"user_total_goals"`
+	UserCompletedGoals      interface{} `json:"user_completed_goals"`
+	UserFailedGoals         interface{} `json:"user_failed_goals"`
+	UserPendingGoals        interface{} `json:"user_pending_goals"`
 }
 
 func (q *Queries) GetUserStats(ctx context.Context, discordUser string) (GetUserStatsRow, error) {
@@ -189,8 +189,8 @@ VALUES (?, ?)
 `
 
 type MarkAttendanceParams struct {
-	DiscordUser  string
-	CheckpointID int64
+	DiscordUser  string `json:"discord_user"`
+	CheckpointID int64  `json:"checkpoint_id"`
 }
 
 func (q *Queries) MarkAttendance(ctx context.Context, arg MarkAttendanceParams) error {

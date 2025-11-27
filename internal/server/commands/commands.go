@@ -69,3 +69,12 @@ func clearUnregisteredCommands(discordClient *discordgo.Session) {
 		}
 	}
 }
+
+func ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Error fetching checkpoint",
+		},
+	})
+}

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -44,7 +45,7 @@ var CreateCheckpointCmd = &Command{
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("Checkpoint created: %s", checkpoint.ID),
+				Content: fmt.Sprintf("Checkpoint created: %d", checkpoint.ID),
 			},
 		})
 	},
@@ -65,12 +66,20 @@ var ListCheckpointsCmd = &Command{
 					Content: "Error getting upcoming checkpoint",
 				},
 			})
+			return
+		}
+
+		checkpointJSON, err := json.Marshal(checkpoint)
+		if err != nil {
+			log.Error("cannot marshal checkpoint to JSON", "err", err)
+			ErrorResponse(s, i)
+			return
 		}
 
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("Upcoming checkpoint: %s", checkpoint.ID),
+				Content: fmt.Sprintf("Upcoming checkpoint:\n```json\n%s\n```", string(checkpointJSON)),
 			},
 		})
 	},

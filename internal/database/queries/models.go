@@ -9,24 +9,24 @@ import (
 )
 
 type Attendance struct {
-	ID           int64
-	DiscordUser  string
-	CheckpointID int64
-	CreatedAt    sql.NullTime
+	ID           int64        `json:"id"`
+	DiscordUser  string       `json:"discord_user"`
+	CheckpointID int64        `json:"checkpoint_id"`
+	CreatedAt    sql.NullTime `json:"created_at"`
 }
 
 type Checkpoint struct {
-	ID          int64
-	ScheduledAt string
-	ChannelID   string
-	CreatedAt   sql.NullTime
+	ID          int64        `json:"id"`
+	ScheduledAt string       `json:"scheduled_at"`
+	ChannelID   string       `json:"channel_id"`
+	CreatedAt   sql.NullTime `json:"created_at"`
 }
 
 type Goal struct {
-	ID           int64
-	DiscordUser  string
-	Description  string
-	CheckpointID int64
-	Status       string
-	CreatedAt    sql.NullTime
+	ID           int64        `json:"id"`
+	DiscordUser  string       `json:"discord_user"`
+	Description  string       `json:"description"`
+	CheckpointID int64        `json:"checkpoint_id"`
+	Status       string       `json:"status"`
+	CreatedAt    sql.NullTime `json:"created_at"`
 }
