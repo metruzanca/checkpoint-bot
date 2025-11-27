@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/charmbracelet/log"
@@ -13,6 +14,8 @@ import (
 	"github.com/metruzanca/checkpoint-bot/internal/database/queries"
 )
 
+// GoalCmd allows users to set or edit their goals for the upcoming checkpoint
+// Supports admin override to edit other users' goals
 var GoalCmd = &Command{
 	ApplicationCommand: discordgo.ApplicationCommand{
 		Name:        "goal",
@@ -47,6 +50,9 @@ var GoalCmd = &Command{
 		},
 	},
 	Handler: func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.InteractionCreate) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		// Determine target user (self or admin override)
 		targetUserID := i.Member.User.ID
 		isAdminOverride := false
@@ -65,7 +71,12 @@ var GoalCmd = &Command{
 
 				if !hasPermission {
 					log.Warn("user attempted admin override without permission", "user", i.Member.User.ID, "guild", i.GuildID)
-					ErrorResponse(s, i, "You don't have permission to edit other users' goals")
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "You don't have permission to edit other users' goals",
+						},
+					})
 					return
 				}
 
@@ -78,36 +89,51 @@ var GoalCmd = &Command{
 		}
 
 		// Get upcoming checkpoint for this guild+channel
-		checkpoint, err := db.GetUpcomingCheckpointByGuildAndChannel(context.Background(), queries.GetUpcomingCheckpointByGuildAndChannelParams{
+		checkpoint, err := db.GetUpcomingCheckpointByGuildAndChannel(ctx, queries.GetUpcomingCheckpointByGuildAndChannelParams{
 			GuildID:   i.GuildID,
 			ChannelID: i.ChannelID,
 		})
 		if err == sql.ErrNoRows {
 			log.Info("no upcoming checkpoint found", "channel", i.ChannelID, "guild", i.GuildID)
-			ErrorResponse(s, i, "No upcoming checkpoint found for this channel")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "No upcoming checkpoint found for this channel",
+				},
+			})
 			return
 		} else if err != nil {
 			log.Error("cannot get upcoming checkpoint", "err", err, "channel", i.ChannelID, "guild", i.GuildID)
-			ErrorResponse(s, i, "Error getting upcoming checkpoint")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error getting upcoming checkpoint",
+				},
+			})
 			return
 		}
 
 		// Check if goal already exists
-		existingGoal, err := db.GetGoalByCheckpointAndUser(context.Background(), queries.GetGoalByCheckpointAndUserParams{
+		existingGoal, err := db.GetGoalByCheckpointAndUser(ctx, queries.GetGoalByCheckpointAndUserParams{
 			CheckpointID: checkpoint.ID,
 			DiscordUser:  targetUserID,
 		})
 
 		// If status is provided and goal exists, update status immediately
 		if statusValue != "" && err == nil {
-			err = db.UpdateGoalStatus(context.Background(), queries.UpdateGoalStatusParams{
+			err = db.UpdateGoalStatus(ctx, queries.UpdateGoalStatusParams{
 				Status:       statusValue,
 				CheckpointID: checkpoint.ID,
 				DiscordUser:  targetUserID,
 			})
 			if err != nil {
 				log.Error("cannot update goal status", "err", err, "checkpoint_id", checkpoint.ID, "user", targetUserID, "status", statusValue)
-				ErrorResponse(s, i, "Error updating goal status")
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Error updating goal status",
+					},
+				})
 				return
 			}
 			log.Info("goal status updated", "checkpoint_id", checkpoint.ID, "user", targetUserID, "status", statusValue)
@@ -123,13 +149,23 @@ var GoalCmd = &Command{
 
 		// If status is provided but goal doesn't exist, inform user they need to create goal first
 		if statusValue != "" && err == sql.ErrNoRows {
-			ErrorResponse(s, i, "You must create a goal first before setting its status. Use /goal without the status parameter to create one.")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "You must create a goal first before setting its status. Use /goal without the status parameter to create one.",
+				},
+			})
 			return
 		}
 
 		if err != nil && err != sql.ErrNoRows {
 			log.Error("cannot get existing goal", "err", err, "checkpoint_id", checkpoint.ID, "user", targetUserID)
-			ErrorResponse(s, i, "Error checking for existing goal")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error checking for existing goal",
+				},
+			})
 			return
 		}
 
@@ -166,7 +202,7 @@ var GoalCmd = &Command{
 								Placeholder: "Enter your goals for this checkpoint...",
 								Value:       goalText,
 								Required:    true,
-								MaxLength:   2000,
+								MaxLength:   DiscordTextInputMaxLength,
 								MinLength:   1,
 							},
 						},
@@ -177,16 +213,25 @@ var GoalCmd = &Command{
 
 		if err != nil {
 			log.Error("cannot respond with modal", "err", err, "channel", i.ChannelID, "guild", i.GuildID)
-			ErrorResponse(s, i, "Error opening goal editor")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error opening goal editor",
+				},
+			})
 			return
 		}
 
-		log.Info("goal modal opened", "checkpoint_id", checkpoint.ID, "user", targetUserID, "is_admin_override", isAdminOverride, "has_existing_goal", err == nil, "status", statusValue)
+		log.Info("goal modal opened", "checkpoint_id", checkpoint.ID, "user", targetUserID, "is_admin_override", isAdminOverride, "has_existing_goal", existingGoal != nil, "status", statusValue)
 	},
 }
 
-// HandleGoalModalSubmission handles modal submissions for goal editing
+// HandleGoalModalSubmission handles modal submissions for goal creation and editing
+// Parses the modal custom ID to extract checkpoint ID, user ID, and optional status
 func HandleGoalModalSubmission(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.InteractionCreate) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	data := i.ModalSubmitData()
 
 	// Parse custom ID: goal_modal_{checkpoint_id}_{user_id} or goal_modal_{checkpoint_id}_{user_id}_{status}
@@ -247,14 +292,14 @@ func HandleGoalModalSubmission(db database.CheckpointDatabase, s *discordgo.Sess
 	}
 
 	// Check if goal exists
-	existingGoal, err := db.GetGoalByCheckpointAndUser(context.Background(), queries.GetGoalByCheckpointAndUserParams{
+	existingGoal, err := db.GetGoalByCheckpointAndUser(ctx, queries.GetGoalByCheckpointAndUserParams{
 		CheckpointID: checkpointID,
 		DiscordUser:  targetUserID,
 	})
 
 	if err == sql.ErrNoRows {
 		// Create new goal
-		_, err = db.CreateGoal(context.Background(), queries.CreateGoalParams{
+		_, err = db.CreateGoal(ctx, queries.CreateGoalParams{
 			DiscordUser:  targetUserID,
 			Description:  goalText,
 			CheckpointID: checkpointID,
@@ -274,7 +319,7 @@ func HandleGoalModalSubmission(db database.CheckpointDatabase, s *discordgo.Sess
 
 		// If status was provided, update it now
 		if statusValue != "" {
-			err = db.UpdateGoalStatus(context.Background(), queries.UpdateGoalStatusParams{
+			err = db.UpdateGoalStatus(ctx, queries.UpdateGoalStatusParams{
 				Status:       statusValue,
 				CheckpointID: checkpointID,
 				DiscordUser:  targetUserID,
@@ -298,7 +343,7 @@ func HandleGoalModalSubmission(db database.CheckpointDatabase, s *discordgo.Sess
 		return
 	} else {
 		// Update existing goal
-		err = db.UpdateGoalDescription(context.Background(), queries.UpdateGoalDescriptionParams{
+		err = db.UpdateGoalDescription(ctx, queries.UpdateGoalDescriptionParams{
 			Description:  goalText,
 			CheckpointID: checkpointID,
 			DiscordUser:  targetUserID,
@@ -318,7 +363,7 @@ func HandleGoalModalSubmission(db database.CheckpointDatabase, s *discordgo.Sess
 
 		// If status was provided, update it now
 		if statusValue != "" {
-			err = db.UpdateGoalStatus(context.Background(), queries.UpdateGoalStatusParams{
+			err = db.UpdateGoalStatus(ctx, queries.UpdateGoalStatusParams{
 				Status:       statusValue,
 				CheckpointID: checkpointID,
 				DiscordUser:  targetUserID,

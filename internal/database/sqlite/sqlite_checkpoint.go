@@ -15,7 +15,7 @@ func (db *SqliteDatabase) CreateCheckpoint(ctx context.Context, params queries.C
 		return nil, err
 	}
 
-	log.Info("Created checkpoint", "checkpoint", "id", record.ID, "channel_id", record.ChannelID, "guild_id", record.GuildID, "discord_user", record.DiscordUser, "scheduled_at", record.ScheduledAt)
+	log.Info("Created checkpoint", "id", record.ID, "channel_id", record.ChannelID, "guild_id", record.GuildID, "discord_user", record.DiscordUser, "scheduled_at", record.ScheduledAt)
 
 	return &record, nil
 }

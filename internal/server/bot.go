@@ -99,7 +99,7 @@ func (b *Bot) UnregisterCommands() {
 			continue
 		}
 		for _, cmd := range registeredCommands {
-			b.DiscordClient.ApplicationCommandDelete(b.DiscordClient.State.User.ID, guild.ID, cmd.ID)
+			err := b.DiscordClient.ApplicationCommandDelete(b.DiscordClient.State.User.ID, guild.ID, cmd.ID)
 			if err != nil {
 				log.Error("Failed to delete command", "command", cmd.Name, "guild", guild.ID, "err", err)
 			}

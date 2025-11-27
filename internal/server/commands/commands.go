@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"context"
+	"time"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/charmbracelet/log"
 	"github.com/metruzanca/checkpoint-bot/internal/database"
@@ -9,11 +12,13 @@ import (
 // Global mutable map, only modified in init() functions
 var commands = make(map[string]*Command)
 
+// CommandHandler manages Discord slash command registration and execution
 type CommandHandler struct {
 	DiscordClient *discordgo.Session
 	Database      database.CheckpointDatabase
 }
 
+// NewCommandHandler creates a new command handler and clears unregistered commands
 func NewCommandHandler(discordClient *discordgo.Session, database database.CheckpointDatabase) *CommandHandler {
 	clearUnregisteredCommands(discordClient)
 	return &CommandHandler{
@@ -22,11 +27,13 @@ func NewCommandHandler(discordClient *discordgo.Session, database database.Check
 	}
 }
 
+// Command represents a Discord slash command with its handler function
 type Command struct {
 	discordgo.ApplicationCommand
 	Handler func(db database.CheckpointDatabase, s *discordgo.Session, i *discordgo.InteractionCreate)
 }
 
+// RegisterCommands registers all commands for all guilds and sets up interaction handlers
 func (h *CommandHandler) RegisterCommands() {
 	for _, guild := range h.DiscordClient.State.Guilds {
 		h.RegisterCommandsForGuild(guild.ID)
@@ -51,6 +58,20 @@ func (h *CommandHandler) RegisterCommands() {
 			} else if i.User != nil {
 				userID = i.User.ID
 			}
+
+			// Rate limiting: check if user has exceeded rate limit
+			if !commandRateLimiter.allow(userID) {
+				log.Warn("rate limit exceeded", "command", commandName, "user", userID, "channel", i.ChannelID, "guild", i.GuildID)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "You're using commands too quickly. Please wait a moment and try again.",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				return
+			}
+
 			if cmd, ok := commands[commandName]; ok {
 				log.Info("command executed", "command", commandName, "channel", i.ChannelID, "guild", i.GuildID, "user", userID)
 				cmd.Handler(h.Database, s, i)
@@ -73,6 +94,8 @@ func (h *CommandHandler) RegisterCommandsForGuild(guildID string) {
 	}
 }
 
+// registerCommand registers a command in the global commands map
+// This is called from init() functions in command files
 func registerCommand(cmd *Command) {
 	commands[cmd.ApplicationCommand.Name] = cmd
 }
@@ -98,6 +121,8 @@ func GetAvailableCommands() []struct {
 	return result
 }
 
+// clearUnregisteredCommands removes commands from Discord that are no longer in the commands map
+// This is called during command handler initialization to clean up old commands
 func clearUnregisteredCommands(discordClient *discordgo.Session) {
 	for _, guild := range discordClient.State.Guilds {
 		registeredCommands, err := discordClient.ApplicationCommands(discordClient.State.User.ID, guild.ID)
@@ -119,11 +144,9 @@ func clearUnregisteredCommands(discordClient *discordgo.Session) {
 	}
 }
 
-func ErrorResponse(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: message,
-		},
-	})
+// dbContext creates a context with timeout for database operations.
+// Returns a context that will be cancelled after the timeout duration.
+// The caller should defer cancel() to ensure proper cleanup.
+func dbContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 10*time.Second)
 }
