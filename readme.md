@@ -20,9 +20,10 @@ Main business logic is split between:
   - ... more to come
 - [x] (try to) Make sure bot unregisters ~~commands when it crashes~~ when starting
 - [x] create second bot for dev
-- [ ] Prevent "this command is outdated" by checking if a command is already registered with the same settings, if so ignore.
+- [x] Enable volumes in railway for persistance
+- [x] Prevent "this command is outdated" by checking if a command is already registered with the same settings, if so ignore.
 - [ ] Improve context usage (e.g. don't use `context.Background()` everywhere).
-- [ ] Enable volumes in railway for persistance
+- [ ] Modal submission is a bit finicky
 
 ## Resources
 

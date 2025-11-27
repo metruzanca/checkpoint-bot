@@ -35,6 +35,7 @@ func (h *CommandHandler) RegisterCommands() {
 		// Handle modal submissions
 		if i.Type == discordgo.InteractionModalSubmit {
 			data := i.ModalSubmitData()
+			log.Info("modal submitted", "custom_id", data.CustomID)
 			if len(data.CustomID) > 0 && data.CustomID[:10] == "goal_modal_" {
 				HandleGoalModalSubmission(h.Database, s, i)
 				return

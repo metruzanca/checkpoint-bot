@@ -25,6 +25,7 @@ type CheckpointDatabase interface {
 
 	GetGoalByCheckpointAndUser(ctx context.Context, params queries.GetGoalByCheckpointAndUserParams) (*queries.Goal, error)
 	UpdateGoalDescription(ctx context.Context, params queries.UpdateGoalDescriptionParams) error
+	UpdateGoalStatus(ctx context.Context, params queries.UpdateGoalStatusParams) error
 
 	GetUpcomingCheckpointsByGuildAndChannel(ctx context.Context, params queries.GetUpcomingCheckpointsByGuildAndChannelParams) ([]queries.Checkpoint, error)
 	GetGoalsByCheckpoint(ctx context.Context, checkpointID int64) ([]queries.Goal, error)

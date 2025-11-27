@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS goals (
     discord_user TEXT NOT NULL,
     description TEXT NOT NULL,
     checkpoint_id INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+    status TEXT NOT NULL DEFAULT 'incomplete', -- 'incomplete', 'completed', 'failed'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE
 );

@@ -177,8 +177,6 @@ var CreateCheckpointCmd = &Command{
 			return
 		}
 
-		log.Info("checkpoint created", "checkpoint_id", checkpoint.ID, "channel", i.ChannelID, "guild", i.GuildID, "user", i.Member.User.ID, "scheduled_at", scheduledAt.Format(time.RFC3339))
-
 		formattedDate := util.FormatCheckpointDate(scheduledAt)
 		countdown := util.FormatCountdown(scheduledAt)
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -348,10 +346,11 @@ func createCheckpointEmbedWithGoals(db database.CheckpointDatabase, checkpoint q
 	}
 
 	if len(goals) > 0 {
-		// Build goals text with user mentions
+		// Build goals text with user mentions and status
 		goalsText := ""
 		for _, goal := range goals {
-			goalsText += fmt.Sprintf("<@%s>:\n%s\n\n", goal.DiscordUser, goal.Description)
+			statusEmoji := getStatusEmoji(goal.Status)
+			goalsText += fmt.Sprintf("%s <@%s>:\n%s\n\n", statusEmoji, goal.DiscordUser, goal.Description)
 		}
 
 		// Truncate if total length exceeds Discord limit (1024 characters)
@@ -359,7 +358,8 @@ func createCheckpointEmbedWithGoals(db database.CheckpointDatabase, checkpoint q
 			// Try to fit as many complete goals as possible
 			truncated := ""
 			for _, goal := range goals {
-				goalEntry := fmt.Sprintf("<@%s>:\n%s\n\n", goal.DiscordUser, goal.Description)
+				statusEmoji := getStatusEmoji(goal.Status)
+				goalEntry := fmt.Sprintf("%s <@%s>:\n%s\n\n", statusEmoji, goal.DiscordUser, goal.Description)
 				if len(truncated)+len(goalEntry) > 1020 {
 					truncated += "..."
 					break
@@ -377,6 +377,20 @@ func createCheckpointEmbedWithGoals(db database.CheckpointDatabase, checkpoint q
 	}
 
 	return embed, nil
+}
+
+// getStatusEmoji returns an emoji representation of the goal status
+func getStatusEmoji(status string) string {
+	switch status {
+	case "completed":
+		return "✅"
+	case "failed":
+		return "❌"
+	case "incomplete":
+		return "⏳"
+	default:
+		return "⏳"
+	}
 }
 
 func init() {

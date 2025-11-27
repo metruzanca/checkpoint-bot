@@ -15,7 +15,7 @@ func (db *SqliteDatabase) CreateCheckpoint(ctx context.Context, params queries.C
 		return nil, err
 	}
 
-	log.Info("Created checkpoint", "checkpoint", record)
+	log.Info("Created checkpoint", "checkpoint", "id", record.ID, "channel_id", record.ChannelID, "guild_id", record.GuildID, "discord_user", record.DiscordUser, "scheduled_at", record.ScheduledAt)
 
 	return &record, nil
 }
@@ -42,7 +42,7 @@ func (db *SqliteDatabase) CreateGoal(ctx context.Context, params queries.CreateG
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Created goal", "goal", record)
+	log.Info("Created goal", "goal_id", record.ID, "discord_user", record.DiscordUser, "checkpoint_id", record.CheckpointID)
 	return &record, nil
 }
 
@@ -119,6 +119,15 @@ func (db *SqliteDatabase) UpdateGoalDescription(ctx context.Context, params quer
 		return err
 	}
 	log.Info("Updated goal description", "checkpoint_id", params.CheckpointID, "discord_user", params.DiscordUser)
+	return nil
+}
+
+func (db *SqliteDatabase) UpdateGoalStatus(ctx context.Context, params queries.UpdateGoalStatusParams) error {
+	err := db.queries.UpdateGoalStatus(ctx, params)
+	if err != nil {
+		return err
+	}
+	log.Info("Updated goal status", "checkpoint_id", params.CheckpointID, "discord_user", params.DiscordUser, "status", params.Status)
 	return nil
 }
 

@@ -53,6 +53,11 @@ WHERE guild_id = ? AND channel_id = ? AND datetime(scheduled_at) >= datetime('no
 ORDER BY datetime(scheduled_at) ASC
 LIMIT 1;
 
+-- name: GetUpcomingCheckpointsByGuildAndChannel :many
+SELECT * FROM checkpoints
+WHERE guild_id = ? AND channel_id = ? AND datetime(scheduled_at) >= datetime('now')
+ORDER BY datetime(scheduled_at) ASC;
+
 -- name: GetGoalByCheckpointAndUser :one
 SELECT * FROM goals
 WHERE checkpoint_id = ? AND discord_user = ?;
@@ -61,4 +66,14 @@ WHERE checkpoint_id = ? AND discord_user = ?;
 UPDATE goals
 SET description = ?
 WHERE checkpoint_id = ? AND discord_user = ?;
+
+-- name: UpdateGoalStatus :exec
+UPDATE goals
+SET status = ?
+WHERE checkpoint_id = ? AND discord_user = ?;
+
+-- name: GetGoalsByCheckpoint :many
+SELECT * FROM goals
+WHERE checkpoint_id = ?
+ORDER BY created_at ASC;
 

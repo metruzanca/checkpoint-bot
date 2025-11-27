@@ -396,3 +396,20 @@ func (q *Queries) UpdateGoalDescription(ctx context.Context, arg UpdateGoalDescr
 	_, err := q.db.ExecContext(ctx, updateGoalDescription, arg.Description, arg.CheckpointID, arg.DiscordUser)
 	return err
 }
+
+const updateGoalStatus = `-- name: UpdateGoalStatus :exec
+UPDATE goals
+SET status = ?
+WHERE checkpoint_id = ? AND discord_user = ?
+`
+
+type UpdateGoalStatusParams struct {
+	Status       string `json:"status"`
+	CheckpointID int64  `json:"checkpoint_id"`
+	DiscordUser  string `json:"discord_user"`
+}
+
+func (q *Queries) UpdateGoalStatus(ctx context.Context, arg UpdateGoalStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateGoalStatus, arg.Status, arg.CheckpointID, arg.DiscordUser)
+	return err
+}
