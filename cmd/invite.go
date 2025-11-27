@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 
 	"github.com/metruzanca/checkpoint-bot/internal/config"
+	"github.com/metruzanca/checkpoint-bot/internal/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,7 +22,7 @@ var inviteCmd = &cobra.Command{
 			log.Fatal("CLIENT_ID is not set")
 		}
 
-		inviteLink := fmt.Sprintf("https://discord.com/api/oauth2/authorize?client_id=%s&permissions=8&scope=bot", clientID)
+		inviteLink := util.GetInviteLink(clientID)
 		fmt.Println("Invite link: ", inviteLink)
 	},
 }

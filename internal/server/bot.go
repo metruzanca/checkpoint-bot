@@ -8,6 +8,7 @@ import (
 	"github.com/metruzanca/checkpoint-bot/internal/database"
 	"github.com/metruzanca/checkpoint-bot/internal/database/sqlite"
 	"github.com/metruzanca/checkpoint-bot/internal/server/commands"
+	"github.com/metruzanca/checkpoint-bot/internal/util"
 	"github.com/spf13/viper"
 
 	"github.com/bwmarrin/discordgo"
@@ -38,7 +39,7 @@ func init() {
 func (b *Bot) Start() error {
 	// Startup logging
 	b.DiscordClient.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Info("Logged in as", "username", s.State.User.Username+"#"+s.State.User.Discriminator, "bot_id", s.State.User.ID)
+		log.Info("Logged in as", "username", s.State.User.Username+"#"+s.State.User.Discriminator, "bot_id", s.State.User.ID, "invite_link", util.GetInviteLink(s.State.User.ID))
 
 		// Show connected guilds
 		guilds := b.DiscordClient.State.Guilds
